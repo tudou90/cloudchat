@@ -1,7 +1,22 @@
-# /etc/caddy/Caddyfile — Caddy gets and renews the HTTPS certificate itself.
-# Replace chat.example.com with your domain (its DNS A/AAAA record must point
-# at this server, and ports 80 and 443 must be open).
+# /etc/caddy/Caddyfile — behind Cloudflare (proxied, orange-cloud DNS record).
+# Replace chat.example.com with your domain.
+#
+# Cloudflare SSL/TLS mode must be "Full (strict)". The certificate below is a
+# Cloudflare Origin Certificate (SSL/TLS → Origin Server → Create certificate),
+# saved on this server; it is trusted by Cloudflare only, which is all we need
+# because visitors never connect here directly.
+{
+	servers {
+		# Only these addresses may tell us the visitor's real IP, via
+		# CF-Connecting-IP. Keep in sync with https://www.cloudflare.com/ips/
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
 chat.example.com {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+
 	encode zstd gzip
 
 	# Files are limited to 10 MB by the app; allow a little multipart overhead.
@@ -9,13 +24,12 @@ chat.example.com {
 		max_size 12MB
 	}
 
-	# Caddy passes Host, X-Forwarded-For and X-Forwarded-Proto and proxies
-	# WebSockets automatically. No access log is configured on purpose: the
-	# app writes its own, with room/file/secret IDs removed.
-	reverse_proxy 127.0.0.1:8080
-}
-
-# Redirect www to the bare domain (optional).
-www.chat.example.com {
-	redir https://chat.example.com{uri} permanent
+	# WebSockets are proxied automatically. The app sees exactly one client
+	# IP: the visitor's (from CF-Connecting-IP when the request came from
+	# Cloudflare, otherwise the connecting address), so rate limits work and
+	# can't be dodged with a fake header. No access log on purpose: the app
+	# writes its own, with room/file/secret IDs removed.
+	reverse_proxy 127.0.0.1:8080 {
+		header_up X-Forwarded-For {client_ip}
+	}
 }

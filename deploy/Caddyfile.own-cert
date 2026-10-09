@@ -1,0 +1,28 @@
+# /etc/caddy/Caddyfile — without a CDN: visitors connect to this server
+# directly. Replace chat.example.com with your domain (its DNS A/AAAA record
+# must point at this server, and ports 80 and 443 must be open).
+chat.example.com {
+	# Your own certificate (e.g. from your cloud provider's SSL service): full
+	# chain first, then the private key. Remove this line to have Caddy get
+	# and renew a free Let's Encrypt certificate automatically instead.
+	tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem
+
+	encode zstd gzip
+
+	# Files are limited to 10 MB by the app; allow a little multipart overhead.
+	request_body {
+		max_size 12MB
+	}
+
+	# Caddy passes Host, X-Forwarded-For (the connecting address; fake ones
+	# from visitors are dropped) and X-Forwarded-Proto, and proxies WebSockets
+	# automatically; the app trusts it via TRUSTED_PROXIES. No access log is
+	# configured on purpose: the app writes its own, with private IDs removed.
+	reverse_proxy 127.0.0.1:8080
+}
+
+# Redirect www to the bare domain (optional; your certificate must cover www,
+# or delete this block).
+www.chat.example.com {
+	redir https://chat.example.com{uri} permanent
+}

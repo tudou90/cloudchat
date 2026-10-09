@@ -5,16 +5,32 @@ HTTPS, Redis on the same machine, and CloudChat as a systemd service. Replace
 `chat.example.com` with your domain everywhere.
 
 ```
-Internet ──443──> Caddy (HTTPS) ──> 127.0.0.1:8080 CloudChat ──> 127.0.0.1:6379 Redis
+Visitor ──> Cloudflare ──443──> Caddy (HTTPS) ──> 127.0.0.1:8080 CloudChat ──> 127.0.0.1:6379 Redis
 ```
+
+There are two ways to put HTTPS in front of it:
+
+| | Config | When |
+|---|---|---|
+| **Behind Cloudflare** | [`Caddyfile`](Caddyfile) + [Cloudflare settings](#cloudflare) | Default for servers outside mainland China |
+| **Own certificate, no CDN** | [`Caddyfile.own-cert`](Caddyfile.own-cert) or [`nginx.conf`](nginx.conf) | E.g. a server in mainland China (needs ICP filing) with a certificate from your cloud provider |
 
 ## 1. Before you start
 
-- A DNS **A** (and optionally **AAAA**) record for your domain pointing at the server.
-- Ports **80** and **443** open (Caddy needs 80 to obtain the certificate).
+- Your domain's DNS: behind Cloudflare, an **A** (and optionally **AAAA**) record
+  pointing at the server with the **proxy (orange cloud) on**; without a CDN, the
+  same records unproxied.
+- Firewall: SSH plus port 443 (and 80 without a CDN). Behind Cloudflare, only
+  accept web traffic from Cloudflare, so nobody can bypass it:
 
 ```bash
-sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
+sudo ufw allow OpenSSH
+# Behind Cloudflare — re-run when https://www.cloudflare.com/ips/ changes:
+for ip in $(curl -fsS https://www.cloudflare.com/ips-v4) $(curl -fsS https://www.cloudflare.com/ips-v6); do
+  sudo ufw allow from "$ip" to any port 443 proto tcp
+done
+# Own certificate, no CDN — instead: sudo ufw allow 80,443/tcp
+sudo ufw enable
 ```
 
 ## 2. Install the software
@@ -72,6 +88,8 @@ sudo chown cloudchat:cloudchat /opt/cloudchat/.env && sudo chmod 600 /opt/cloudc
 
 Must be right: `PUBLIC_URL=https://your-domain` (secure cookies, HSTS, SEO) and
 `TRUSTED_PROXIES=127.0.0.1,::1` (otherwise every visitor shares one rate limit).
+Keep it that way behind Cloudflare too: Caddy works out the visitor's real IP
+from Cloudflare and passes only that on.
 
 ## 6. Start CloudChat
 
@@ -84,14 +102,46 @@ curl http://127.0.0.1:8080/healthz      # → {"status":"ok"}
 
 ## 7. HTTPS with Caddy
 
+Put the certificate on the server — behind Cloudflare, a **Cloudflare Origin
+Certificate** (dashboard → SSL/TLS → Origin Server → Create certificate, PEM);
+otherwise the certificate and key from your provider (full chain):
+
 ```bash
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-sudo nano /etc/caddy/Caddyfile          # your domain
-sudo systemctl reload caddy
-curl https://chat.example.com/healthz   # → {"status":"ok"}
+sudo mkdir -p /etc/caddy/certs
+sudo nano /etc/caddy/certs/origin.pem       # Cloudflare: certificate  (own cert: fullchain.pem)
+sudo nano /etc/caddy/certs/origin-key.pem   # Cloudflare: private key  (own cert: privkey.pem)
+sudo chown -R root:caddy /etc/caddy/certs && sudo chmod 750 /etc/caddy/certs && sudo chmod 640 /etc/caddy/certs/*
 ```
 
-Prefer nginx? Use [`nginx.conf`](nginx.conf) with certbot instead of Caddy.
+```bash
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile   # own cert: deploy/Caddyfile.own-cert
+sudo nano /etc/caddy/Caddyfile                  # your domain
+sudo systemctl reload caddy
+curl https://chat.example.com/healthz           # → {"status":"ok"}
+```
+
+Prefer nginx? Use [`nginx.conf`](nginx.conf) (own certificate) instead of Caddy.
+
+### Cloudflare
+
+In the Cloudflare dashboard for your domain:
+
+- **SSL/TLS → Overview**: encryption mode **Full (strict)**.
+- **SSL/TLS → Edge Certificates**: *Always Use HTTPS* on, *Minimum TLS* 1.2.
+  Leave HSTS off there — the app already sends it.
+- **Network**: *WebSockets* on (the default).
+- **Turn off anything that rewrites pages** — the site's Content Security Policy
+  blocks the scripts they inject, and they would break the "no third-party
+  scripts" promise in the Privacy Policy:
+  - *Scrape Shield → Email Address Obfuscation* (otherwise the contact email on
+    the Terms and Privacy pages shows as "[email protected]"),
+  - *Speed → Rocket Loader*,
+  - *Web Analytics* automatic setup and *Zaraz*.
+- **Caching**: the defaults are right (pages, API and files aren't cached). Don't
+  add "Cache Everything" rules for `/api/*` or `/chat/*` — deleted files could
+  then stay downloadable from Cloudflare's cache.
+- Cloudflare's free plan allows 100 MB uploads and keeps idle WebSockets open
+  for 100 s; CloudChat's 10 MB files and ~54 s pings fit within both.
 
 ## 8. Logs
 
@@ -143,4 +193,6 @@ survive 5 minutes with nobody connected.
 ## After going live
 
 - Submit `https://your-domain/sitemap.xml` in Google Search Console.
+- Behind Cloudflare: check that rate limits see real visitors —
+  `journalctl -u cloudchat -n 20` should show visitors' IPs, not Cloudflare's or `127.0.0.1`.
 - Check the security headers: https://securityheaders.com
