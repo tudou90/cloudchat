@@ -64,27 +64,13 @@
     close rooms, block access, and preserve or report content where the law requires.
   </p>
 
-  <h2>6. Copyright complaints (DMCA)</h2>
+  <h2>6. Copyright complaints</h2>
   <p>
-    We respond to notices of alleged copyright infringement under the U.S. Digital Millennium Copyright
-    Act. To file a notice, send our designated agent a written communication that includes:
-  </p>
-  <ol>
-    <li>your physical or electronic signature;</li>
-    <li>identification of the copyrighted work you claim is infringed;</li>
-    <li>identification of the infringing material and information reasonably sufficient for us to locate it (for example, the room's invite link);</li>
-    <li>your name, address, telephone number and email address;</li>
-    <li>a statement that you have a good-faith belief that the use is not authorized by the copyright owner, its agent or the law; and</li>
-    <li>a statement, under penalty of perjury, that the information in your notice is accurate and that you are the copyright owner or authorized to act on its behalf.</li>
-  </ol>
-  <p>
-    Designated agent: {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}, {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}},
-    {{email .Legal.ContactEmail}}.
-  </p>
-  <p>
-    If your content was removed and you believe that was a mistake or misidentification, you may send a
-    counter-notice with the information required by 17 U.S.C. § 512(g)(3). We may block access to the
-    Service for repeat infringers.
+    If you believe content on CloudChat infringes your copyright, email {{email .Legal.ContactEmail}}
+    with: identification of the copyrighted work; the room's invite link or other information that lets
+    us find the material; your contact details; and a statement that you are the copyright owner or
+    authorized to act on the owner's behalf. We will review the complaint promptly and remove infringing
+    material. We may block access to the Service for people who repeatedly infringe.
   </p>
 
   <h2>7. Suspension and termination</h2>
@@ -136,7 +122,7 @@
   <h2>13. Contact</h2>
   <p>
     {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}<br>
-    {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}}<br>
+    {{if .Legal.OperatorAddress}}{{.Legal.OperatorAddress}}<br>{{end}}
     {{email .Legal.ContactEmail}}
   </p>
 </main>

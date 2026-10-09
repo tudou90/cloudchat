@@ -45,7 +45,7 @@ type LegalInfo struct {
 // Missing lists the legal settings that are still empty.
 func (l LegalInfo) Missing() []string {
 	var m []string
-	for name, v := range map[string]string{"OPERATOR_NAME": l.OperatorName, "OPERATOR_ADDRESS": l.OperatorAddress, "CONTACT_EMAIL": l.ContactEmail, "GOVERNING_STATE": l.GoverningState} {
+	for name, v := range map[string]string{"OPERATOR_NAME": l.OperatorName, "CONTACT_EMAIL": l.ContactEmail, "GOVERNING_STATE": l.GoverningState} {
 		if strings.TrimSpace(v) == "" {
 			m = append(m, name)
 		}

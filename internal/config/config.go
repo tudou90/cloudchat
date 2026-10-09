@@ -53,7 +53,7 @@ type Config struct {
 	// Legal details shown in the Terms of Service and Privacy Policy. Pages
 	// show a highlighted placeholder for anything left empty.
 	OperatorName     string // OPERATOR_NAME, e.g. "Example LLC"
-	OperatorAddress  string // OPERATOR_ADDRESS, postal address (needed for DMCA notices)
+	OperatorAddress  string // OPERATOR_ADDRESS, optional postal address (required if you register a DMCA agent)
 	ContactEmail     string // CONTACT_EMAIL, for privacy, legal and abuse reports
 	GoverningState   string // GOVERNING_STATE, e.g. "Delaware"
 	LogRetentionDays int    // LOG_RETENTION_DAYS, how long server logs are kept (default 7)

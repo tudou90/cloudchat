@@ -131,7 +131,7 @@
   <h2>Contact</h2>
   <p>
     {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}<br>
-    {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}}<br>
+    {{if .Legal.OperatorAddress}}{{.Legal.OperatorAddress}}<br>{{end}}
     {{email .Legal.ContactEmail}}
   </p>
 </main>
