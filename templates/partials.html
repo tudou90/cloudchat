@@ -1,0 +1,71 @@
+{{/* Shared page chrome. Each page passes a PageData with Title/Description/Path set. */}}
+
+{{define "head"}}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{.Title}}</title>
+  <meta name="description" content="{{.Description}}">
+  <link rel="canonical" href="{{.BaseURL}}{{.Path}}">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph / social previews -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CloudChat">
+  <meta property="og:title" content="{{.Title}}">
+  <meta property="og:description" content="{{.Description}}">
+  <meta property="og:url" content="{{.BaseURL}}{{.Path}}">
+  <meta property="og:image" content="{{.BaseURL}}/static/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="CloudChat — free temporary chat rooms, no sign-up">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{.Title}}">
+  <meta name="twitter:description" content="{{.Description}}">
+  <meta name="twitter:image" content="{{.BaseURL}}/static/og-image.png">
+
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <link rel="preload" href="/static/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/site.css?v={{.AssetVersion}}">
+{{end}}
+
+{{define "nav"}}
+  <header>
+    <nav class="flex items-center justify-between gap-3 px-4 sm:px-8 py-5 max-w-6xl mx-auto" aria-label="Main">
+      <a href="/" class="text-lg sm:text-xl font-semibold flex items-center gap-2 whitespace-nowrap">
+        <img src="/static/favicon.svg" alt="" width="28" height="28" class="rounded-md"> CloudChat
+      </a>
+      <div class="flex items-center gap-3 sm:gap-8 text-slate-400 text-sm whitespace-nowrap">
+        <a href="/#how-it-works" class="hidden md:inline hover:text-white transition">How it works</a>
+        <a href="/#faq" class="hidden md:inline hover:text-white transition">FAQ</a>
+        <a href="/changelog" class="hover:text-white transition{{if eq .Path "/changelog"}} text-white font-semibold{{end}}"{{if eq .Path "/changelog"}} aria-current="page"{{end}}>Changelog</a>
+        <a href="/chat/" class="gradient-bg text-white px-3 sm:px-5 py-2 rounded-full font-semibold text-sm hover:opacity-90 transition">Open Chat →</a>
+      </div>
+    </nav>
+  </header>
+{{end}}
+
+{{define "footer"}}
+  <footer class="border-t border-white/5 mt-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-8 py-10 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between text-sm text-slate-500">
+      <div>
+        <div class="text-slate-300 font-semibold mb-1">CloudChat</div>
+        <div>Temporary chat rooms and self-destructing notes. Ephemeral by design.</div>
+      </div>
+      <nav class="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
+        <a href="/chat/" class="hover:text-slate-300 transition">Start a chat room</a>
+        <a href="/chat/secret" class="hover:text-slate-300 transition">Send a secret note</a>
+        <a href="/#privacy" class="hover:text-slate-300 transition">Privacy</a>
+        <a href="/#faq" class="hover:text-slate-300 transition">FAQ</a>
+        <a href="/changelog" class="hover:text-slate-300 transition">Changelog</a>
+      </nav>
+    </div>
+    <div class="text-center text-slate-700 text-xs pb-8">© {{.Year}} CloudChat</div>
+  </footer>
+{{end}}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body class="font-sans text-white min-h-screen">
+{{template "nav" .}}
+
+<main class="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+  <h1 class="text-4xl font-semibold gradient-text mb-2">Changelog</h1>
+  <p class="text-slate-400 mb-12">Every notable change to CloudChat, newest first. Defaults below can be changed by whoever runs the server.</p>
+
+  <!-- Roadmap -->
+  <section class="glass rounded-3xl p-6 mb-12" aria-labelledby="roadmap-title">
+    <h2 id="roadmap-title" class="text-lg font-semibold mb-1">🧭 Coming next</h2>
+    <p class="text-slate-500 text-sm mb-4">Planned, in no particular order. No dates promised.</p>
+    <ul class="space-y-2 text-sm text-slate-300 list-disc pl-5">
+      <li><strong class="text-white">Automatic reconnect</strong> — rejoin the room on its own after a network drop or server restart, instead of asking you to refresh.</li>
+      <li><strong class="text-white">More languages</strong> — starting with Chinese.</li>
+      <li><strong class="text-white">Install as an app</strong> — add CloudChat to your home screen and launch it like a native app.</li>
+    </ul>
+  </section>
+
+  <ol class="space-y-6" reversed>
+    <!-- v1.3 -->
+    <li>
+      <article class="glass rounded-3xl p-6" aria-labelledby="v13">
+        <time datetime="2026-10-08" class="block text-xs text-slate-500 mb-3">October 8, 2026 · v1.3</time>
+        <h2 id="v13" class="text-lg font-semibold mb-3">🛡️ Privacy controls &amp; a new homepage</h2>
+        <ul class="space-y-2 text-sm text-slate-400 leading-relaxed list-disc pl-5">
+          <li><strong class="text-slate-200">Late joiners start fresh.</strong> By default, people who join a room only see messages sent after they arrived. Refreshing or reconnecting still restores everything you've already seen.</li>
+          <li><strong class="text-slate-200">Rooms destroy themselves.</strong> Five minutes after the last person leaves, the room, its messages and its files are deleted. Come back within that window and nothing is lost.</li>
+          <li><strong class="text-slate-200">See who's online.</strong> A live counter and member list in the room header. Several tabs from the same browser count as one person.</li>
+          <li><strong class="text-slate-200">Accurate presence after restarts.</strong> Members who dropped off without saying goodbye are cleared automatically within about a minute.</li>
+          <li><strong class="text-slate-200">New homepage</strong> with a clear explanation of what we store and for how long, plus an FAQ.</li>
+        </ul>
+      </article>
+    </li>
+
+    <!-- v1.2 -->
+    <li>
+      <article class="glass rounded-3xl p-6" aria-labelledby="v12">
+        <time datetime="2026-10-08" class="block text-xs text-slate-500 mb-3">October 8, 2026 · v1.2</time>
+        <h2 id="v12" class="text-lg font-semibold mb-3">📱 Built for phones</h2>
+        <ul class="space-y-2 text-sm text-slate-400 leading-relaxed list-disc pl-5">
+          <li>The chat room now fills the whole screen on phones, with a compact one-line header.</li>
+          <li>No more surprise zoom when tapping the message box on iPhone, and the input bar stays clear of the home indicator.</li>
+          <li>Images show as small thumbnails and open in a full-screen preview instead of a new tab.</li>
+          <li>A new app icon, and links back to the homepage from every entry page.</li>
+        </ul>
+      </article>
+    </li>
+
+    <!-- v1.1 -->
+    <li>
+      <article class="glass rounded-3xl p-6" aria-labelledby="v11">
+        <time datetime="2026-10-08" class="block text-xs text-slate-500 mb-3">October 8, 2026 · v1.1</time>
+        <h2 id="v11" class="text-lg font-semibold mb-3">📎 Files, invite links &amp; message history</h2>
+        <ul class="space-y-2 text-sm text-slate-400 leading-relaxed list-disc pl-5">
+          <li><strong class="text-slate-200">Share files and images</strong> up to 10 MB — pick them, drag them in, or paste a screenshot.</li>
+          <li><strong class="text-slate-200">Invite links.</strong> Copy one link to bring people in; paste a link or a room ID to join.</li>
+          <li><strong class="text-slate-200">Message history.</strong> Refreshing the page no longer means starting from a blank screen.</li>
+          <li><strong class="text-slate-200">Fixes:</strong> no more duplicate messages after a room is re-entered, nobody can post under someone else's name, and long messages (up to 2,000 characters) no longer drop the connection.</li>
+        </ul>
+      </article>
+    </li>
+
+    <!-- Secret notes -->
+    <li>
+      <article class="glass rounded-3xl p-6" aria-labelledby="secrets">
+        <time datetime="2026-10-08" class="block text-xs text-slate-500 mb-3">October 8, 2026</time>
+        <h2 id="secrets" class="text-lg font-semibold mb-3">🔒 Secret notes are live</h2>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Send password-protected, self-destructing notes. Your note is encrypted in your browser
+          before it leaves your device — our servers never see the text or the password. Choose a TTL of
+          1 day, 1 week, or 1 month. The note is gone the moment it's read, after 5 wrong password
+          attempts, or when the timer runs out.
+        </p>
+        <a href="/chat/secret" class="inline-block mt-3 text-sm text-sky-400 hover:text-sky-300 transition">Send a secret →</a>
+      </article>
+    </li>
+
+    <!-- v1.0 -->
+    <li>
+      <article class="glass rounded-3xl p-6" aria-labelledby="v10">
+        <time datetime="2026-05-21" class="block text-xs text-slate-500 mb-3">May 21, 2026 · v1.0</time>
+        <h2 id="v10" class="text-lg font-semibold mb-3">🚀 CloudChat launches</h2>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Instant, disposable chat rooms with no accounts. Built with Go (Gin), Redis Pub/Sub so it can run
+          on several servers at once, and Vue 3 + Tailwind CSS for the interface.
+        </p>
+      </article>
+    </li>
+  </ol>
+</main>
+
+{{template "footer" .}}
+</body>
+</html>

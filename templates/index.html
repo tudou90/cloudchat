@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "head" .}}
+  <script type="application/ld+json">{{.JSONLD}}</script>
+</head>
+<body class="font-sans text-white min-h-screen">
+{{template "nav" .}}
+
+<main>
+  <!-- Hero -->
+  <section class="flex flex-col items-center text-center px-4 pt-16 sm:pt-24 pb-20" aria-labelledby="hero-title">
+    <div class="animate-float text-7xl mb-8 select-none" aria-hidden="true">☁️</div>
+    <h1 id="hero-title" class="text-[2.4rem] leading-tight sm:text-6xl md:text-7xl font-semibold tracking-tight mb-6 max-w-4xl">
+      <span class="gradient-text">Free temporary chat rooms.</span><br>No sign-up.
+    </h1>
+    <p class="text-slate-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
+      CloudChat lets you create a private chat room in one click, share the link, and start talking —
+      no account, no app, no phone number. Share files and images, see who's online, and when everyone
+      leaves, the room and everything in it is destroyed.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+      <a href="/chat/" class="gradient-bg text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-2xl shadow-sky-500/30 hover:opacity-90 hover:-translate-y-0.5 transition-all">
+        Start a free chat room →
+      </a>
+      <a href="/chat/secret" class="glass text-slate-200 px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-white/10 transition">
+        Send a secret note
+      </a>
+    </div>
+    <ul class="flex flex-wrap justify-center gap-3 mt-12 text-sm" aria-label="Highlights">
+      <li class="glass px-4 py-2 rounded-full text-slate-300">💨 No account needed</li>
+      <li class="glass px-4 py-2 rounded-full text-slate-300">📱 Works in any browser</li>
+      <li class="glass px-4 py-2 rounded-full text-slate-300">📎 Files &amp; images</li>
+      <li class="glass px-4 py-2 rounded-full text-slate-300">⏳ Gone when everyone leaves</li>
+    </ul>
+  </section>
+
+  <!-- How it works -->
+  <section id="how-it-works" class="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="how-title">
+    <h2 id="how-title" class="text-3xl sm:text-4xl font-semibold text-center mb-3">How it works</h2>
+    <p class="text-slate-400 text-center mb-12">From zero to chatting in under ten seconds.</p>
+    <ol class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <li class="glass rounded-3xl p-6">
+        <div class="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center font-semibold mb-4">1</div>
+        <h3 class="font-semibold text-lg mb-2">Create a room</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Pick a nickname and click <em>Start New Session</em>. No email, no password, nothing to install.</p>
+      </li>
+      <li class="glass rounded-3xl p-6">
+        <div class="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center font-semibold mb-4">2</div>
+        <h3 class="font-semibold text-lg mb-2">Share the invite link</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Copy the link and send it however you like. Anyone with the link can join from a phone or a computer.</p>
+      </li>
+      <li class="glass rounded-3xl p-6">
+        <div class="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center font-semibold mb-4">3</div>
+        <h3 class="font-semibold text-lg mb-2">Chat — then it disappears</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Talk in real time and share files. {{.Facts.EmptyRoomAfter | capfirst}} after the last person leaves, the room is destroyed for good.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="features-title">
+    <h2 id="features-title" class="text-3xl sm:text-4xl font-semibold text-center mb-3">Everything a quick conversation needs</h2>
+    <p class="text-slate-400 text-center mb-12">And nothing it doesn't.</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">⚡</div>
+        <h3 class="font-semibold mb-2">Instant, real-time rooms</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Messages arrive instantly over WebSockets. Refresh the page or reconnect and the conversation is still there.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">📎</div>
+        <h3 class="font-semibold mb-2">Share files and images</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Drop in screenshots, photos or documents up to {{.Facts.MaxFileMB}} MB. Images preview right in the chat.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">👥</div>
+        <h3 class="font-semibold mb-2">See who's online</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">A live member list shows who is in the room right now, so you know your message is being read.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">⏳</div>
+        <h3 class="font-semibold mb-2">Self-destructing rooms</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">When everyone leaves, the room, its messages and its files are deleted after {{.Facts.EmptyRoomAfter}}. Idle rooms expire after {{.Facts.RoomIdle}}.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">🔥</div>
+        <h3 class="font-semibold mb-2">Secret notes that burn after reading</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Password-protected notes encrypted in your browser. They can be opened once, then they're gone.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <div class="text-3xl mb-4" aria-hidden="true">📱</div>
+        <h3 class="font-semibold mb-2">Works on every device</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Phone, tablet or desktop — it runs in the browser you already have. Nothing to download.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Secret notes -->
+  <section id="secret-notes" class="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="secret-title">
+    <div class="glass rounded-3xl p-6 sm:p-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <div>
+        <h2 id="secret-title" class="text-3xl font-semibold mb-4">Need to send a password once? <span class="gradient-text">Use a secret note.</span></h2>
+        <p class="text-slate-400 leading-relaxed mb-6">
+          Secret notes are encrypted in your browser with your password before they leave your device —
+          our server never sees the text or the password. The link works exactly once.
+        </p>
+        <a href="/chat/secret" class="inline-block gradient-bg text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition">Create a secret note →</a>
+      </div>
+      <ul class="space-y-3 text-sm text-slate-300">
+        <li class="flex gap-3"><span aria-hidden="true">🔐</span><span>AES-256 encryption in the browser; the key travels only in the link, never to the server.</span></li>
+        <li class="flex gap-3"><span aria-hidden="true">👁️</span><span>Readable once — deleted the moment it's opened.</span></li>
+        <li class="flex gap-3"><span aria-hidden="true">🧯</span><span>Destroyed after {{.Facts.SecretAttempts}} wrong password attempts.</span></li>
+        <li class="flex gap-3"><span aria-hidden="true">⏰</span><span>Unread notes expire after 1 day, 1 week or 1 month — your choice.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Use cases -->
+  <section id="use-cases" class="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="use-title">
+    <h2 id="use-title" class="text-3xl sm:text-4xl font-semibold text-center mb-12">What people use CloudChat for</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <article class="glass rounded-3xl p-6">
+        <h3 class="font-semibold mb-2">Quick group coordination</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Plan a trip, an event or a hand-off without creating yet another permanent group chat.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <h3 class="font-semibold mb-2">Talking to strangers safely</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Chat with a buyer, seller or new contact without exchanging phone numbers or accounts.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <h3 class="font-semibold mb-2">Sharing credentials once</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Send a password, API key or Wi-Fi code as a secret note instead of leaving it in your inbox forever.</p>
+      </article>
+      <article class="glass rounded-3xl p-6">
+        <h3 class="font-semibold mb-2">Support and interviews</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Spin up a room for a support session, an interview or a pairing call, and let it vanish afterwards.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Privacy / data retention -->
+  <section id="privacy" class="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="privacy-title">
+    <h2 id="privacy-title" class="text-3xl sm:text-4xl font-semibold text-center mb-3">What we keep — and for how long</h2>
+    <p class="text-slate-400 text-center mb-10">No accounts, no tracking scripts, no ads. Here is exactly what exists on our servers.</p>
+    <div class="glass rounded-3xl overflow-hidden">
+      <table class="w-full text-sm text-left">
+        <caption class="sr-only">Data CloudChat stores and when it is deleted</caption>
+        <thead class="text-slate-400 bg-white/5">
+          <tr><th scope="col" class="px-5 py-3 font-semibold">Data</th><th scope="col" class="px-5 py-3 font-semibold">Deleted</th></tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-slate-300">
+          <tr><td class="px-5 py-4">Chat messages (last {{.Facts.HistoryLimit}} per room)</td><td class="px-5 py-4">{{.Facts.EmptyRoomAfter | capfirst}} after everyone leaves, or after {{.Facts.RoomIdle}} of inactivity</td></tr>
+          <tr><td class="px-5 py-4">Shared files and images</td><td class="px-5 py-4">Together with the room</td></tr>
+          <tr><td class="px-5 py-4">Secret notes (encrypted; we can't read them)</td><td class="px-5 py-4">When opened, or when they expire</td></tr>
+          <tr><td class="px-5 py-4">One random cookie, so your own messages stay yours after a refresh</td><td class="px-5 py-4">Cleared with your browser data; never linked to your identity</td></tr>
+          <tr><td class="px-5 py-4">Accounts, emails, phone numbers</td><td class="px-5 py-4">Never collected</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="max-w-3xl mx-auto px-4 sm:px-8 py-16 scroll-mt-8" aria-labelledby="faq-title">
+    <h2 id="faq-title" class="text-3xl sm:text-4xl font-semibold text-center mb-10">Frequently asked questions</h2>
+    <div class="space-y-3">
+      {{range .FAQ}}
+      <details class="glass rounded-2xl px-5 py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">
+          <h3 class="text-base">{{.Question}}</h3>
+          <span class="faq-icon text-slate-400 text-xl leading-none" aria-hidden="true">+</span>
+        </summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">{{.Answer}}</p>
+      </details>
+      {{end}}
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="px-4 py-20 text-center" aria-labelledby="cta-title">
+    <h2 id="cta-title" class="text-3xl sm:text-4xl font-semibold mb-4">Start a conversation that doesn't stick around</h2>
+    <p class="text-slate-400 mb-8">Free, instant, and gone when you're done.</p>
+    <a href="/chat/" class="inline-block gradient-bg text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-2xl shadow-sky-500/30 hover:opacity-90 transition">Start a free chat room →</a>
+  </section>
+</main>
+
+{{template "footer" .}}
+</body>
+</html>

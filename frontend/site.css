@@ -1,0 +1,48 @@
+/* Source for /static/site.css, the stylesheet of the server-rendered pages in
+   ../templates. Rebuild with: npm run build:site (also part of npm run build). */
+@import "tailwindcss";
+@source "../templates";
+
+/* Outfit (SIL OFL 1.1, see /static/fonts/OFL.txt), self-hosted and preloaded
+   so the page doesn't reflow when the web font arrives. */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/static/fonts/outfit-latin.woff2') format('woff2-variations'), url('/static/fonts/outfit-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@theme {
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { background: #0f172a; }
+
+.gradient-text {
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-bg { background: linear-gradient(135deg, #38bdf8, #818cf8); }
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.animate-float { animation: float 4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-float { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* FAQ disclosure marker */
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary .faq-icon { transition: transform 0.2s; }
+details[open] > summary .faq-icon { transform: rotate(45deg); }
