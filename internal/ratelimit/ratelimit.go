@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"cloudchat/internal/database"
+	"cloudchat/internal/stats"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
@@ -84,6 +85,7 @@ func (l *Limiter) Middleware(rules ...Rule) gin.HandlerFunc {
 
 // Reject aborts with 429 Too Many Requests and a Retry-After header.
 func Reject(c *gin.Context, retry time.Duration) {
+	stats.Inc(stats.RateLimited)
 	secs := int(math.Ceil(retry.Seconds()))
 	if secs < 1 {
 		secs = 1

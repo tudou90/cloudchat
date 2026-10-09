@@ -1,3 +1,4 @@
+| `STATS_FILE` | Where daily usage totals are archived (`cloudchat admin stats`); `off` disables them |
 # CloudChat
 
 Free temporary chat rooms with no sign-up, and self-destructing secret notes.
@@ -5,6 +6,7 @@ Free temporary chat rooms with no sign-up, and self-destructing secret notes.
 - **Chat rooms**: create a room, share the invite link, chat in real time, share files and images (up to 10 MB), see who's online. When everyone leaves, the room and everything in it is deleted.
 - **Secret notes**: password-protected notes encrypted in the browser (the server never sees the text or password); readable once.
 - **Abuse protection**: per-client rate limits shared across servers, per-connection message throttling, connection caps, separate storage caps for files and chat, and `cloudchat admin` commands to inspect, export and delete reported rooms.
+- **Usage statistics**: daily totals only (distinct visitors, rooms, messages, files, secrets, peaks, refusals), kept in a file on disk and shown by `cloudchat admin stats`. No IDs, IPs or content are stored.
 
 Built with Go (Gin) + Redis (Pub/Sub, so several servers can run side by side) and Vue 3 + Tailwind CSS.
 
@@ -58,6 +60,7 @@ cmd/server/          entry point, routes, graceful shutdown
 internal/config/     configuration (.env + environment)
 internal/ratelimit/  rate limits, throttling, connection caps, storage guard
 internal/service/    secret notes and file storage
+internal/stats/      daily usage counters (Redis) and their on-disk archive
 internal/transport/  HTTP handlers, server-rendered pages, WebSocket hub
 templates/           homepage and changelog (Go templates)
 frontend/            Vue chat app (served at /chat/) and site.css source

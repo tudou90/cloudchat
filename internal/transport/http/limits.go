@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cloudchat/internal/ratelimit"
+	"cloudchat/internal/stats"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,6 +47,7 @@ func (h *Handler) storageFull(c *gin.Context) bool {
 	if !h.Protect.Storage.Full() {
 		return false
 	}
+	stats.Inc(stats.StorageRejected)
 	c.Header("Retry-After", "300")
 	c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 		"message": "CloudChat is at capacity right now. Please try again in a few minutes.",
@@ -59,9 +61,18 @@ func (h *Handler) filesFull(c *gin.Context) bool {
 	if !h.Protect.Storage.FilesFull() {
 		return false
 	}
+	stats.Inc(stats.StorageRejected)
 	c.Header("Retry-After", "600")
 	c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 		"message": "File sharing is busy right now. Please try again later — chat still works.",
 	})
 	return true
+}
+
+// CountVisitor counts the client among today's visitors (see package stats).
+func CountVisitor() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		stats.Visit(ratelimit.ClientKey(c))
+		c.Next()
+	}
 }

@@ -18,6 +18,7 @@ import (
 	"cloudchat/internal/models"
 	"cloudchat/internal/ratelimit"
 	"cloudchat/internal/service"
+	"cloudchat/internal/stats"
 	"cloudchat/internal/transport/ws"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -92,6 +93,10 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create room"})
 		return
+	}
+	stats.Inc(stats.RoomsCreated)
+	if n, err := ws.CountRooms(); err == nil {
+		stats.Peak(stats.PeakRooms, n)
 	}
 	c.JSON(http.StatusOK, gin.H{"id": roomID})
 }
@@ -218,6 +223,8 @@ func (h *Handler) UploadFile(c *gin.Context) {
 		return
 	}
 	info.URL = fmt.Sprintf("/api/rooms/%s/files/%s", roomID, info.ID)
+	stats.Inc(stats.FilesUploaded)
+	stats.Add(stats.FileBytes, info.Size)
 
 	msg := models.Message{Type: "file", Sender: ident.Name, SenderID: ident.ID, File: info, Time: time.Now()}
 	if err := h.Hub.Publish(roomID, msg); err != nil {
@@ -259,6 +266,8 @@ func (h *Handler) DownloadFile(c *gin.Context) {
 		modTime = st.ModTime()
 	}
 	http.ServeContent(c.Writer, c.Request, "", modTime, content)
+	stats.Inc(stats.FilesDownloaded)
+	stats.Add(stats.DownloadBytes, int64(c.Writer.Size()))
 }
 
 func fileError(c *gin.Context, err error) {
@@ -292,6 +301,7 @@ func (h *Handler) CreateSecret(c *gin.Context) {
 		secretError(c, err, 0)
 		return
 	}
+	stats.Inc(stats.SecretsCreated)
 	c.JSON(http.StatusOK, res)
 }
 
@@ -326,6 +336,7 @@ func (h *Handler) RevealSecret(c *gin.Context) {
 		secretError(c, err, left)
 		return
 	}
+	stats.Inc(stats.SecretsRead)
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, secret)
 }

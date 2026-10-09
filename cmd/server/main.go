@@ -17,6 +17,7 @@ import (
 	"cloudchat/internal/database"
 	"cloudchat/internal/ratelimit"
 	"cloudchat/internal/service"
+	"cloudchat/internal/stats"
 	"cloudchat/internal/transport/http"
 	"cloudchat/internal/transport/ws"
 
@@ -41,7 +42,8 @@ func main() {
 
 	// `cloudchat admin …`: moderation commands, then exit.
 	if len(os.Args) > 1 && os.Args[1] == "admin" {
-		if err := admin.Run(os.Args[2:], os.Stdin, os.Stdout, admin.Options{MaxRooms: cfg.MaxRooms}); err != nil {
+		stats.Disable()
+		if err := admin.Run(os.Args[2:], os.Stdin, os.Stdout, admin.Options{MaxRooms: cfg.MaxRooms, StatsFile: cfg.StatsFile}); err != nil {
 			log.SetFlags(0)
 			log.Fatalf("admin: %v", err)
 		}
@@ -100,6 +102,13 @@ func main() {
 
 	service.StartFileJanitor(cfg.FileSweepInterval)
 	log.Printf("Storing files in %s", service.FileDir())
+	if cfg.StatsFile == "" {
+		stats.Disable()
+		log.Println("Usage statistics are off (STATS_FILE)")
+	} else {
+		stats.Archive{Path: cfg.StatsFile}.StartRollover()
+		log.Printf("Archiving daily usage statistics to %s", cfg.StatsFile)
+	}
 
 	r := gin.New()
 	// Uploads over 1 MB are buffered in a temporary file, not in memory.
@@ -134,7 +143,7 @@ func main() {
 	r.HEAD("/chat/*filepath", chatApp)
 
 	// API
-	api := r.Group("/api")
+	api := r.Group("/api", http.CountVisitor())
 	{
 		api.POST("/rooms", h.RateLimit(http.LimitRoomCreate, http.LimitRoomCreateDay), h.CreateRoom)
 		api.GET("/rooms/:id", h.RateLimit(http.LimitRoomLookup), h.GetRoom)
@@ -146,7 +155,7 @@ func main() {
 	}
 
 	// WebSocket
-	r.GET("/ws/:roomID", h.RateLimit(http.LimitWSConnect), h.ServeWS)
+	r.GET("/ws/:roomID", http.CountVisitor(), h.RateLimit(http.LimitWSConnect), h.ServeWS)
 
 	srv := &nethttp.Server{
 		Addr:    cfg.ServerAddr,

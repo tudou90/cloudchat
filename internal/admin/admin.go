@@ -41,18 +41,26 @@ Secret notes (accept a note link or ID; their content can't be read):
   secret show   <link>
   secret delete <link> [--yes]
 
+Usage statistics (daily totals, nothing personal):
+  stats [days]                last 30 (or <days>) days: visitors, rooms, messages, files...
+  stats archive               write finished days to STATS_FILE now
+
 Run from the directory with .env (e.g. cd /opt/cloudchat && sudo ./cloudchat admin …).
 `
 
 // Options are the server settings admin commands report on.
 type Options struct {
-	MaxRooms int // MAX_ROOMS, 0 = unlimited
+	MaxRooms  int    // MAX_ROOMS, 0 = unlimited
+	StatsFile string // STATS_FILE, empty = statistics off
 }
 
 // Run executes an admin command; out receives the report, in answers prompts.
 func Run(args []string, in io.Reader, out io.Writer, opts Options) error {
 	if len(args) == 2 && args[0] == "room" && args[1] == "list" {
 		return listRooms(out, opts)
+	}
+	if len(args) >= 1 && args[0] == "stats" {
+		return showStats(args[1:], out, opts)
 	}
 	if len(args) < 2 {
 		fmt.Fprint(out, usage)

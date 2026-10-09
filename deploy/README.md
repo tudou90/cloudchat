@@ -172,6 +172,12 @@ sudo ./cloudchat admin room delete 'https://chat.example.com/chat/?room=…'   #
 sudo ./cloudchat admin secret delete 'https://chat.example.com/chat/secret/…'
 ```
 
+`sudo ./cloudchat admin stats [days]` shows daily usage totals (visitors, rooms,
+messages, files, peaks, refused requests) for the last 30 days or `days` days.
+Finished days are archived to `STATS_FILE` (`/var/lib/cloudchat/stats.jsonl`),
+one JSON line per day, within an hour of midnight UTC; that file is the only
+long-lived record and is worth including in backups. Nothing personal is in it.
+
 - `room delete` removes the room, its messages and files at once, shows everyone
   in it "This session was closed for violating our Terms of Service", disconnects
   them, and makes the invite link stop working.

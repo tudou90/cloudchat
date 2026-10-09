@@ -15,6 +15,7 @@ import (
 	"cloudchat/internal/models"
 	"cloudchat/internal/ratelimit"
 	"cloudchat/internal/service"
+	"cloudchat/internal/stats"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
@@ -247,7 +248,14 @@ func (h *Hub) RegisterClient(c *Client) {
 		h.Rooms[c.Room] = make(map[*Client]bool)
 	}
 	h.Rooms[c.Room][c] = true
+	online := 0
+	for _, room := range h.Rooms {
+		online += len(room)
+	}
 	h.Mu.Unlock()
+
+	stats.Inc(stats.RoomJoins)
+	stats.Peak(stats.PeakOnline, int64(online))
 
 	// Members are keyed by connection token: one identity may have several
 	// tabs open. Joining also restores the full TTL if the room was emptying.
@@ -599,7 +607,9 @@ func (c *Client) ReadPump() {
 		}
 		if err := c.Hub.Publish(c.Room, msg); err != nil {
 			log.Printf("Failed to publish message to room %s: %v", c.Room, err)
+			continue
 		}
+		stats.Inc(stats.Messages)
 	}
 }
 

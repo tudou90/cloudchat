@@ -60,6 +60,10 @@ type Config struct {
 	// FileSweepInterval is how often expired files are deleted from disk
 	// (FILE_SWEEP_INTERVAL, default 30s).
 	FileSweepInterval time.Duration
+	// StatsFile is where finished days' usage counts are archived, one JSON
+	// line per day (STATS_FILE, default ./data/stats.jsonl; empty disables
+	// statistics altogether).
+	StatsFile string
 	// MaxRooms caps how many rooms can exist at once across the platform
 	// (MAX_ROOMS, default 0 = unlimited). New rooms are refused beyond it.
 	MaxRooms int
@@ -143,6 +147,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid FILE_STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("FILE_STORAGE_LIMIT_MB"))
 	}
 	cfg.FileStorageDir = getEnv("FILE_STORAGE_DIR", "./data/files")
+	cfg.StatsFile = getEnv("STATS_FILE", "./data/stats.jsonl")
+	if strings.EqualFold(cfg.StatsFile, "off") || strings.EqualFold(cfg.StatsFile, "none") {
+		cfg.StatsFile = ""
+	}
 	if cfg.FileSweepInterval, err = time.ParseDuration(getEnv("FILE_SWEEP_INTERVAL", "30s")); err != nil || cfg.FileSweepInterval < time.Second {
 		return nil, fmt.Errorf("invalid FILE_SWEEP_INTERVAL %q: must be a duration of at least 1s", os.Getenv("FILE_SWEEP_INTERVAL"))
 	}

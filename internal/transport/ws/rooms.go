@@ -97,3 +97,9 @@ func RoomCreatedAt(roomID string) (t time.Time, ok bool) {
 	}
 	return time.Unix(sec, 0), true
 }
+
+// CountRooms returns how many rooms are registered. The registry is pruned
+// lazily, so this can run slightly above the number of live rooms.
+func CountRooms() (int64, error) {
+	return database.RDB.SCard(database.Ctx, roomsKey).Result()
+}
