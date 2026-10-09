@@ -16,6 +16,7 @@ import (
 	"cloudchat/internal/config"
 	"cloudchat/internal/database"
 	"cloudchat/internal/ratelimit"
+	"cloudchat/internal/service"
 	"cloudchat/internal/transport/http"
 	"cloudchat/internal/transport/ws"
 
@@ -34,6 +35,9 @@ func main() {
 
 	// 1. Initialize Database
 	database.InitRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	if err := service.InitFileStore(cfg.FileStorageDir); err != nil {
+		log.Fatalf("File storage %s: %v", cfg.FileStorageDir, err)
+	}
 
 	// `cloudchat admin …`: moderation commands, then exit.
 	if len(os.Args) > 1 && os.Args[1] == "admin" {
@@ -60,7 +64,7 @@ func main() {
 	h := http.NewHandler(hub, http.Protection{
 		Limiter: ratelimit.New(cfg.RateLimit),
 		Conns:   ratelimit.NewConnCounter(http.MaxConnsPerClient),
-		Storage: ratelimit.NewStorageGuard(int64(cfg.StorageLimitMB)<<20, int64(cfg.FileStorageLimitMB)<<20),
+		Storage: ratelimit.NewStorageGuard(int64(cfg.StorageLimitMB)<<20, int64(cfg.FileStorageLimitMB)<<20, service.FilesUsed),
 	})
 	pages, err := http.NewPages("./templates", http.SiteInfo{
 		PublicURL:            cfg.PublicURL,
@@ -94,7 +98,12 @@ func main() {
 		log.Println("Serving as HTTPS (PUBLIC_URL): secure cookies and HSTS enabled")
 	}
 
+	service.StartFileJanitor(cfg.FileSweepInterval)
+	log.Printf("Storing files in %s", service.FileDir())
+
 	r := gin.New()
+	// Uploads over 1 MB are buffered in a temporary file, not in memory.
+	r.MaxMultipartMemory = 1 << 20
 	r.Use(gin.Recovery(), http.AccessLog(), http.SecurityHeaders(https))
 	// Only believe X-Forwarded-For from configured proxies; otherwise clients
 	// could fake their IP and dodge rate limits.

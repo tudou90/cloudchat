@@ -29,7 +29,7 @@
     <li><strong>Your nickname, messages and the files you share</strong>, so the people in the room can see them.</li>
     <li>Rooms are <strong>not end-to-end encrypted</strong>: while a room exists, messages and files are stored on our servers in a form we could technically read. We do not read them, except when we must to investigate a report of illegal content or abuse, or when required by law.</li>
     <li>We keep only a room's last {{.Facts.HistoryLimit}} messages. Everything in a room — messages, files and the list of who is in it — is deleted {{.Facts.EmptyRoomAfter}} after the last person leaves, or after {{.Facts.RoomIdle}} without activity, whichever comes first.</li>
-    <li>Uploaded files are stored in memory with the file name you gave them and a file type we detect.</li>
+    <li>Uploaded files are stored on our server's disk, together with the file name you gave them and a file type we detect. When the room is deleted they become unavailable immediately and are erased from the disk within a few minutes.</li>
   </ul>
 
   <h3>Secret notes</h3>
@@ -87,8 +87,9 @@
     </table>
   </div>
   <p>
-    We don't keep backups of rooms or notes: our database is held in memory and not written to disk,
-    so deleted data cannot be restored — by us or anyone else. If we receive a legal request to
+    We don't keep backups of rooms, files or notes. Messages and notes are held only in memory and
+    never written to disk; shared files are kept on disk only while their room exists. Deleted data
+    cannot be restored by us. If we receive a legal request to
     preserve specific data, we may keep it longer as required by law.
   </p>
 

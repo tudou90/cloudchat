@@ -44,6 +44,7 @@ Settings come from environment variables or a `.env` file (real environment vari
 | `TRUSTED_PROXIES` | Set to your reverse proxy (e.g. `127.0.0.1`) so rate limits see real client IPs |
 | `REDIS_ADDR` / `REDIS_PASSWORD` | Where Redis lives |
 | `STORAGE_LIMIT_MB` | Stop new rooms/files/secrets before Redis runs out of memory |
+| `FILE_STORAGE_DIR` / `FILE_STORAGE_LIMIT_MB` | Where shared files are stored on disk, and how much space they may take |
 | `MAX_ROOMS` | Most rooms that can exist at once (0 = unlimited) |
 
 To deploy on a Linux server with systemd and HTTPS, follow [deploy/README.md](deploy/README.md).

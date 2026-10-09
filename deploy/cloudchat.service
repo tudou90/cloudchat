@@ -12,6 +12,10 @@ Group=cloudchat
 WorkingDirectory=/opt/cloudchat
 ExecStart=/opt/cloudchat/cloudchat
 Environment=GIN_MODE=release
+# Shared files live in /var/lib/cloudchat/files (FILE_STORAGE_DIR), created
+# for the service user and only readable by it.
+StateDirectory=cloudchat
+StateDirectoryMode=0700
 
 # SIGTERM triggers a graceful shutdown: clients are removed from their rooms
 # (keeping presence and the empty-room countdown correct) and disconnected;
@@ -23,7 +27,8 @@ RestartSec=2
 
 LimitNOFILE=65536
 
-# Hardening: the app only needs to read its directory and talk to the network.
+# Hardening: the app only needs to read its directory, write its state
+# directory and talk to the network.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

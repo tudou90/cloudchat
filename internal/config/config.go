@@ -48,12 +48,18 @@ type Config struct {
 	// could dodge rate limits by sending a fake X-Forwarded-For.
 	TrustedProxies []string
 	// StorageLimitMB stops new rooms, files and secrets once Redis uses this
-	// much memory (STORAGE_LIMIT_MB, default 1024; 0 disables).
+	// much memory (STORAGE_LIMIT_MB, default 384; 0 disables).
 	StorageLimitMB int
-	// FileStorageLimitMB pauses file uploads (only) once Redis uses this much
-	// memory, keeping room for chat (FILE_STORAGE_LIMIT_MB, default 600;
-	// 0 disables; must not exceed STORAGE_LIMIT_MB).
+	// FileStorageDir is where shared files are stored on disk
+	// (FILE_STORAGE_DIR, default ./data/files). Redis keeps only their
+	// metadata; files are deleted from disk when their room is.
+	FileStorageDir string
+	// FileStorageLimitMB pauses file uploads (only) once the files on disk
+	// take this much space (FILE_STORAGE_LIMIT_MB, default 2048; 0 disables).
 	FileStorageLimitMB int
+	// FileSweepInterval is how often expired files are deleted from disk
+	// (FILE_SWEEP_INTERVAL, default 30s).
+	FileSweepInterval time.Duration
 	// MaxRooms caps how many rooms can exist at once across the platform
 	// (MAX_ROOMS, default 0 = unlimited). New rooms are refused beyond it.
 	MaxRooms int
@@ -130,17 +136,18 @@ func Load() (*Config, error) {
 			cfg.TrustedProxies = append(cfg.TrustedProxies, p)
 		}
 	}
-	if cfg.StorageLimitMB, err = strconv.Atoi(getEnv("STORAGE_LIMIT_MB", "1024")); err != nil || cfg.StorageLimitMB < 0 {
+	if cfg.StorageLimitMB, err = strconv.Atoi(getEnv("STORAGE_LIMIT_MB", "384")); err != nil || cfg.StorageLimitMB < 0 {
 		return nil, fmt.Errorf("invalid STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("STORAGE_LIMIT_MB"))
 	}
-	if cfg.FileStorageLimitMB, err = strconv.Atoi(getEnv("FILE_STORAGE_LIMIT_MB", "600")); err != nil || cfg.FileStorageLimitMB < 0 {
+	if cfg.FileStorageLimitMB, err = strconv.Atoi(getEnv("FILE_STORAGE_LIMIT_MB", "2048")); err != nil || cfg.FileStorageLimitMB < 0 {
 		return nil, fmt.Errorf("invalid FILE_STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("FILE_STORAGE_LIMIT_MB"))
+	}
+	cfg.FileStorageDir = getEnv("FILE_STORAGE_DIR", "./data/files")
+	if cfg.FileSweepInterval, err = time.ParseDuration(getEnv("FILE_SWEEP_INTERVAL", "30s")); err != nil || cfg.FileSweepInterval < time.Second {
+		return nil, fmt.Errorf("invalid FILE_SWEEP_INTERVAL %q: must be a duration of at least 1s", os.Getenv("FILE_SWEEP_INTERVAL"))
 	}
 	if cfg.MaxRooms, err = strconv.Atoi(getEnv("MAX_ROOMS", "0")); err != nil || cfg.MaxRooms < 0 {
 		return nil, fmt.Errorf("invalid MAX_ROOMS %q: must be a non-negative integer (0 = unlimited)", os.Getenv("MAX_ROOMS"))
-	}
-	if cfg.StorageLimitMB > 0 && cfg.FileStorageLimitMB > cfg.StorageLimitMB {
-		return nil, fmt.Errorf("FILE_STORAGE_LIMIT_MB (%d) must not exceed STORAGE_LIMIT_MB (%d)", cfg.FileStorageLimitMB, cfg.StorageLimitMB)
 	}
 
 	ttl, err := time.ParseDuration(getEnv("ROOM_TTL", "24h"))

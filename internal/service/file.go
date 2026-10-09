@@ -2,8 +2,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -85,10 +90,11 @@ func SanitizeFileName(name string) string {
 }
 
 // SaveFile stores a file for the room, expiring after ttl, and returns its
-// metadata (without URL). The MIME type is sniffed from the content rather
-// than trusted from the client.
-func SaveFile(roomID, name string, data []byte, ttl time.Duration) (*models.FileInfo, error) {
-	size := int64(len(data))
+// metadata (without URL). The content goes to disk (see InitFileStore);
+// Redis keeps only the name, type and size, and expiring that makes the
+// file unavailable at once. The MIME type is sniffed from the content
+// rather than trusted from the client.
+func SaveFile(roomID, name string, src io.Reader, size int64, ttl time.Duration) (*models.FileInfo, error) {
 	if size == 0 {
 		return nil, ErrFileEmpty
 	}
@@ -105,54 +111,107 @@ func SaveFile(roomID, name string, data []byte, ttl time.Duration) (*models.File
 	if ok == 0 {
 		return nil, ErrRoomQuota
 	}
+	saved := false
+	defer func() {
+		if !saved {
+			database.RDB.DecrBy(database.Ctx, quotaKey, size)
+		}
+	}()
 
 	id, err := newRandomID()
 	if err != nil {
-		database.RDB.DecrBy(database.Ctx, quotaKey, size)
 		return nil, err
 	}
-	info := &models.FileInfo{
-		ID:   id,
-		Name: SanitizeFileName(name),
-		Size: size,
-		Mime: http.DetectContentType(data),
+	path := filePath(roomID, id)
+	mime, written, err := writeFile(path, src)
+	if err != nil {
+		return nil, err
 	}
+	if written != size {
+		os.Remove(path)
+		if written > MaxFileSize {
+			return nil, ErrFileTooLarge
+		}
+		return nil, fmt.Errorf("file is %d bytes, expected %d", written, size)
+	}
+	info := &models.FileInfo{ID: id, Name: SanitizeFileName(name), Size: size, Mime: mime}
 
 	key := fileKey(roomID, id)
 	_, err = database.RDB.TxPipelined(database.Ctx, func(p redis.Pipeliner) error {
-		p.HMSet(database.Ctx, key, "name", info.Name, "mime", info.Mime, "size", size, "data", data)
+		p.HMSet(database.Ctx, key, "name", info.Name, "mime", info.Mime, "size", size)
 		p.Expire(database.Ctx, key, ttl)
 		p.SAdd(database.Ctx, RoomFilesKey(roomID), id)
 		p.Expire(database.Ctx, RoomFilesKey(roomID), ttl)
 		return nil
 	})
 	if err != nil {
-		database.RDB.DecrBy(database.Ctx, quotaKey, size)
+		os.Remove(path)
 		return nil, err
 	}
+	saved = true
+	filesUsed.Add(size)
 	return info, nil
 }
 
-type StoredFile struct {
-	models.FileInfo
-	Data []byte
+// writeFile writes src to path through a temporary file, so a half-written
+// file is never visible, and sniffs the content type from its first bytes.
+func writeFile(path string, src io.Reader) (mime string, written int64, err error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return "", 0, err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), tmpPrefix+"*")
+	if err != nil {
+		return "", 0, err
+	}
+	defer func() {
+		if err != nil {
+			tmp.Close()
+			os.Remove(tmp.Name())
+		}
+	}()
+	head := make([]byte, 512)
+	n, err := io.ReadFull(src, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return "", 0, err
+	}
+	head = head[:n]
+	if _, err = tmp.Write(head); err != nil {
+		return "", 0, err
+	}
+	rest, err := io.Copy(tmp, io.LimitReader(src, MaxFileSize+1-int64(n)))
+	if err != nil {
+		return "", 0, err
+	}
+	if err = tmp.Close(); err != nil {
+		return "", 0, err
+	}
+	if err = os.Rename(tmp.Name(), path); err != nil {
+		return "", 0, err
+	}
+	return http.DetectContentType(head), int64(n) + rest, nil
 }
 
-func GetFile(roomID, fileID string) (*StoredFile, error) {
-	vals, err := database.RDB.HMGet(database.Ctx, fileKey(roomID, fileID), "name", "mime", "size", "data").Result()
+// OpenFile returns a file's metadata and its content, opened for reading.
+// The caller must close it. Files whose metadata has expired are not found,
+// even if the janitor hasn't removed them from disk yet.
+func OpenFile(roomID, fileID string) (*models.FileInfo, *os.File, error) {
+	vals, err := database.RDB.HMGet(database.Ctx, fileKey(roomID, fileID), "name", "mime", "size").Result()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	data, ok := vals[3].(string)
+	name, ok := vals[0].(string)
 	if !ok {
-		return nil, ErrFileNotFound
+		return nil, nil, ErrFileNotFound
 	}
-	name, _ := vals[0].(string)
 	mime, _ := vals[1].(string)
 	sizeStr, _ := vals[2].(string)
 	size, _ := strconv.ParseInt(sizeStr, 10, 64)
-	return &StoredFile{
-		FileInfo: models.FileInfo{ID: fileID, Name: name, Mime: mime, Size: size},
-		Data:     []byte(data),
-	}, nil
+	f, err := os.Open(filePath(roomID, fileID))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil, ErrFileNotFound
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	return &models.FileInfo{ID: fileID, Name: name, Mime: mime, Size: size}, f, nil
 }

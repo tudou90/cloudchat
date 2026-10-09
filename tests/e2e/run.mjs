@@ -11,7 +11,7 @@
 //          E2E_PORT_BASE     first port for test servers  (default 18200)
 //          E2E_SKIP_BROWSER  set to 1 to skip browser suites
 import { execFileSync, execSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,7 @@ const SUITES = [
   { name: 'secret', script: 'api/secret.mjs', env: off, node: ['--no-warnings'] },
   { name: 'file', script: 'api/file.mjs', env: { ...off, HISTORY_FOR_NEW_MEMBERS: 'true' } },
   ...['200', '5', '0'].map(n => ({ name: `history-limit-${n}`, script: 'api/history.mjs', env: { ...off, HISTORY_FOR_NEW_MEMBERS: 'true', HISTORY_LIMIT: n } })),
+  { name: 'file-store', script: 'api/filestore.mjs', env: { ...off, EMPTY_ROOM_TTL: '2s' } },
   { name: 'empty-room', script: 'api/empty.mjs', servers: 2, env: { ...off, EMPTY_ROOM_TTL: '2s', HISTORY_FOR_NEW_MEMBERS: 'true' } },
   { name: 'presence', script: 'api/presence.mjs', servers: 2, env: { ...off, HISTORY_FOR_NEW_MEMBERS: 'true' } },
   { name: 'presence-heal', script: 'api/heal.mjs', env: off },
@@ -40,8 +41,7 @@ const SUITES = [
   { name: 'ratelimit-trusted-proxy', script: 'api/ratelimit.mjs', args: ['trusted'], env: { TRUSTED_PROXIES: '127.0.0.1,::1' } },
   { name: 'ratelimit-spoofed-xff', script: 'api/ratelimit.mjs', args: ['untrusted'], env: {} },
   { name: 'ratelimit-disabled', script: 'api/ratelimit.mjs', args: ['disabled'], env: off },
-  { name: 'file-storage-guard', script: 'api/ratelimit.mjs', args: ['filesfull'], env: { STORAGE_LIMIT_MB: '1024', FILE_STORAGE_LIMIT_MB: '1' },
-    setup: () => execSync(`${REDIS_CLI} -x set e2e:filler`, { input: Buffer.alloc(2 << 20, 97) }) },
+  { name: 'file-storage-guard', script: 'api/ratelimit.mjs', args: ['filesfull'], env: { STORAGE_LIMIT_MB: '1024', FILE_STORAGE_LIMIT_MB: '1' } },
   { name: 'storage-guard', script: 'api/ratelimit.mjs', args: ['storagefull'], env: { STORAGE_LIMIT_MB: '1', FILE_STORAGE_LIMIT_MB: '0' },
     // Guarantee Redis uses more than 1 MB, even on a fresh instance.
     setup: () => execSync(`${REDIS_CLI} -x set e2e:filler`, { input: Buffer.alloc(2 << 20, 97) }) },
@@ -122,15 +122,20 @@ async function main() {
   let failedSuites = 0, passes = 0, fails = 0;
   for (const s of suites) {
     redis('flushdb');
+    // Each suite gets an empty file store, shared by its servers (like a
+    // shared volume); files expire from it quickly so tests can see that.
+    const fileDir = join(ARTIFACTS, 'files', s.name);
+    rmSync(fileDir, { recursive: true, force: true });
+    const env = { FILE_STORAGE_DIR: fileDir, FILE_SWEEP_INTERVAL: '1s', ...s.env };
     s.setup?.();
     const ports = [port, port + 1];
     port += 2;
     const servers = [];
     let result;
     try {
-      for (let i = 0; i < (s.servers ?? 1); i++) servers.push(await startServer(bin, ports[i], s.env));
+      for (let i = 0; i < (s.servers ?? 1); i++) servers.push(await startServer(bin, ports[i], env));
       result = await runScript(s, {
-        ...process.env, ...s.env,
+        ...process.env, ...env,
         BASE_URL: `http://localhost:${ports[0]}`, BASE_URL2: `http://localhost:${ports[1]}`,
         REDIS_CLI, REDIS_ADDR: `${redisHost}:${redisPort || 6379}`, REDIS_DB: DB,
         SERVER_BIN: bin, REPO_ROOT: ROOT, ARTIFACTS_DIR: ARTIFACTS,

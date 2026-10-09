@@ -1,6 +1,6 @@
 // `cloudchat admin` moderation commands: show, export, delete rooms and secrets.
 import { execFileSync, execSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const B=process.env.BASE_URL, W=B.replace(/^http/,'ws');
@@ -35,6 +35,7 @@ r=admin(['room','delete',link],'no\n'); ok(r.code!==0&&keys(room).length>0,'dele
 r=admin(['room','delete',link,'--yes']); await wait(600);
 ok(r.code===0&&/Deleted room .* \(1 file\(s\)\)/.test(r.out),'delete --yes reports what was removed');
 ok(keys(room).length===0,'no Redis keys left for the room (messages, files, members)');
+ok(!existsSync(join(process.env.FILE_STORAGE_DIR,room)),'its files are deleted from disk at once');
 ok(a.msgs.some(m=>m.type==='closed'&&/violating our Terms/.test(m.content))&&b.msgs.some(m=>m.type==='closed'),'everyone in the room is told it was closed');
 ok(a.closed&&b.closed,'their connections are closed');
 ok((await fetch(`${B}/api/rooms/${room}`)).status===404,'invite link no longer works');

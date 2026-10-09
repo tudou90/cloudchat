@@ -86,6 +86,10 @@ sudo nano /opt/cloudchat/.env       # set PUBLIC_URL and REDIS_PASSWORD
 sudo chown cloudchat:cloudchat /opt/cloudchat/.env && sudo chmod 600 /opt/cloudchat/.env
 ```
 
+Shared files are stored in `/var/lib/cloudchat/files` (systemd creates it, readable
+only by the service) and deleted from disk when their room is; Redis holds only
+their name, type and size. `FILE_STORAGE_LIMIT_MB` caps how much disk they use.
+
 Must be right: `PUBLIC_URL=https://your-domain` (secure cookies, HSTS, SEO) and
 `TRUSTED_PROXIES=127.0.0.1,::1` (otherwise every visitor shares one rate limit).
 Keep it that way behind Cloudflare too: Caddy works out the visitor's real IP

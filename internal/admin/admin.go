@@ -104,6 +104,9 @@ func Run(args []string, in io.Reader, out io.Writer, opts Options) error {
 			if err != nil {
 				return err
 			}
+			if err := service.DeleteRoomFiles(roomID); err != nil {
+				fmt.Fprintf(out, "Warning: removing the room's files from disk failed (the janitor will retry): %v\n", err)
+			}
 			if !existed {
 				fmt.Fprintln(out, "Room data was already gone; any remaining connections were told to close.")
 				return nil
@@ -342,6 +345,23 @@ func showRoom(roomID string, out io.Writer) error {
 	return nil
 }
 
+func exportFile(roomID, fileID, dst string) error {
+	_, src, err := service.OpenFile(roomID, fileID)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, src); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
+}
+
 func exportRoom(roomID, dir string, out io.Writer) error {
 	info, err := loadRoom(roomID)
 	if err != nil {
@@ -360,14 +380,9 @@ func exportRoom(roomID, dir string, out io.Writer) error {
 		return err
 	}
 	for _, f := range info.Files {
-		stored, err := service.GetFile(roomID, f.ID)
-		if err != nil {
-			fmt.Fprintf(out, "  ! %s: %v\n", f.Name, err)
-			continue
-		}
 		name := f.ID + "-" + strings.NewReplacer("/", "_", "\\", "_").Replace(service.SanitizeFileName(f.Name))
-		if err := os.WriteFile(filepath.Join(dir, "files", name), stored.Data, 0o600); err != nil {
-			return err
+		if err := exportFile(roomID, f.ID, filepath.Join(dir, "files", name)); err != nil {
+			fmt.Fprintf(out, "  ! %s: %v\n", f.Name, err)
 		}
 	}
 	fmt.Fprintf(out, "Exported %d message(s) and %d file(s) to %s\n", len(info.Messages), len(info.Files), dir)

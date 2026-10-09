@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"mime"
 	"net/http"
@@ -212,13 +211,8 @@ func (h *Handler) UploadFile(c *gin.Context) {
 		return
 	}
 	defer f.Close()
-	data, err := io.ReadAll(io.LimitReader(f, service.MaxFileSize+1))
-	if err != nil {
-		fileError(c, err)
-		return
-	}
 
-	info, err := service.SaveFile(roomID, fh.Filename, data, h.Hub.RoomTTL)
+	info, err := service.SaveFile(roomID, fh.Filename, f, fh.Size, h.Hub.RoomTTL)
 	if err != nil {
 		fileError(c, err)
 		return
@@ -238,11 +232,12 @@ func (h *Handler) DownloadFile(c *gin.Context) {
 		fileError(c, service.ErrFileNotFound)
 		return
 	}
-	f, err := service.GetFile(roomID, fileID)
+	f, content, err := service.OpenFile(roomID, fileID)
 	if err != nil {
 		fileError(c, err)
 		return
 	}
+	defer content.Close()
 
 	// Only known raster images render inline; anything else (HTML, SVG,
 	// scripts...) is forced to download so it can't run in our origin.
@@ -257,7 +252,13 @@ func (h *Handler) DownloadFile(c *gin.Context) {
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("Content-Security-Policy", "default-src 'none'; sandbox")
 	c.Header("Cache-Control", "private, max-age=86400")
-	c.Data(http.StatusOK, contentType, f.Data)
+	c.Header("Content-Type", contentType)
+	// Streams from disk (with Range support) instead of loading it into memory.
+	var modTime time.Time
+	if st, err := content.Stat(); err == nil {
+		modTime = st.ModTime()
+	}
+	http.ServeContent(c.Writer, c.Request, "", modTime, content)
 }
 
 func fileError(c *gin.Context, err error) {

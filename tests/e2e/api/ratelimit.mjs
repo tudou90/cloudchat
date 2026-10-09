@@ -73,7 +73,9 @@ if(mode==='storagefull'){
 }
 if(mode==='filesfull'){
   const room=await newRoom(); ok(!!room,'file storage full: rooms can still be created');
-  const w=await conn(room,null,'Alice'); const r=await up(room,w.msgs[0].token,null,'x','a.txt');
+  const w=await conn(room,null,'Alice');
+  ok((await up(room,w.msgs[0].token,null,new Uint8Array(1536<<10),'big.bin')).status===200,'file storage: upload below the limit is accepted');
+  const r=await up(room,w.msgs[0].token,null,'x','a.txt');
   ok(r.status===503&&/chat still works/.test((await r.json()).message),'file storage full: upload -> 503 with message');
   const sec=JSON.stringify({ciphertext:'AAAA',iv:'AAAAAAAAAAAAAAAA',salt:'AAAAAAAAAAAAAAAAAAAAAA==',iterations:600000,auth:'A'.repeat(43)+'=',ttl:'1d'});
   ok((await post('/api/secrets',null,sec)).status===200,'file storage full: secrets still work');

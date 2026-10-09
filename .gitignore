@@ -45,3 +45,4 @@ static/site.css
 
 # End-to-end test output (logs, screenshots, server binary)
 tests/e2e/artifacts/
+/data/
