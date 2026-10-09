@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -59,6 +60,9 @@ type Pages struct {
 	info         SiteInfo
 	pages        map[string]*template.Template
 	assetVersion string
+	// siteUpdated is the date of the newest changelog entry (YYYY-MM-DD),
+	// used as the sitemap's lastmod for the product pages.
+	siteUpdated string
 }
 
 type faqItem struct {
@@ -103,6 +107,11 @@ func NewPages(dir string, info SiteInfo) (*Pages, error) {
 			return nil, err
 		}
 		p.pages[name] = t
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "changelog.html")); err == nil {
+		if m := changelogDate.FindSubmatch(b); m != nil {
+			p.siteUpdated = string(m[1])
+		}
 	}
 	// Cache-bust the stylesheet whenever it is rebuilt.
 	if css, err := os.ReadFile("./static/site.css"); err == nil {
@@ -233,16 +242,27 @@ func (p *Pages) Changelog(c *gin.Context) {
 	})
 }
 
-// legalUpdated is the "last updated" date of the Terms and Privacy Policy.
-// Change it whenever their text changes.
-const legalUpdated = "October 9, 2026"
+// legalUpdated is the "last updated" date (YYYY-MM-DD) of the Terms and
+// Privacy Policy. Change it whenever their text changes.
+const legalUpdated = "2026-10-09"
+
+// changelogDate finds the first (newest) entry date in changelog.html.
+var changelogDate = regexp.MustCompile(`<time datetime="(\d{4}-\d{2}-\d{2})"`)
+
+func displayDate(iso string) string {
+	t, err := time.Parse(time.DateOnly, iso)
+	if err != nil {
+		return iso
+	}
+	return t.Format("January 2, 2006")
+}
 
 func (p *Pages) Terms(c *gin.Context) {
 	p.render(c, "terms", pageData{
 		Title:       "Terms of Service — CloudChat",
 		Description: "The rules for using CloudChat's temporary chat rooms and secret notes.",
 		Path:        "/terms",
-		Updated:     legalUpdated,
+		Updated:     displayDate(legalUpdated),
 	})
 }
 
@@ -251,21 +271,55 @@ func (p *Pages) Privacy(c *gin.Context) {
 		Title:       "Privacy Policy — CloudChat",
 		Description: "What CloudChat stores, for how long, and why. No accounts, no tracking, no ads.",
 		Path:        "/privacy",
-		Updated:     legalUpdated,
+		Updated:     displayDate(legalUpdated),
 	})
 }
 
 func (p *Pages) Robots(c *gin.Context) {
-	c.String(http.StatusOK, "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /ws/\nDisallow: /chat/secret/\nDisallow: /chat/?room=\n\nSitemap: %s/sitemap.xml\n", p.baseURL(c))
+	c.String(http.StatusOK, `# CloudChat
+# Rooms and secret notes are private, unguessable links: keep them out of
+# search results. Everything else is public.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /ws/
+Disallow: /healthz
+Disallow: /chat/secret/
+Disallow: /*?room=
+Disallow: /*&room=
+
+Sitemap: %s/sitemap.xml
+`, p.baseURL(c))
+}
+
+// sitemapURLs are the public, indexable pages. Rooms and secret notes are
+// private and must never be listed.
+var sitemapURLs = []struct{ path, freq, prio string }{
+	{"/", "weekly", "1.0"},
+	{"/chat/", "monthly", "0.8"},
+	{"/chat/secret", "monthly", "0.8"},
+	{"/changelog", "weekly", "0.5"},
+	{"/privacy", "yearly", "0.3"},
+	{"/terms", "yearly", "0.3"},
 }
 
 func (p *Pages) Sitemap(c *gin.Context) {
-	base := p.baseURL(c)
+	base := template.HTMLEscapeString(p.baseURL(c))
 	var b strings.Builder
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	for _, u := range []struct{ path, prio string }{{"/", "1.0"}, {"/chat/", "0.8"}, {"/chat/secret", "0.7"}, {"/changelog", "0.5"}, {"/privacy", "0.3"}, {"/terms", "0.3"}} {
-		fmt.Fprintf(&b, "  <url><loc>%s%s</loc><priority>%s</priority></url>\n", template.HTMLEscapeString(base), u.path, u.prio)
+	for _, u := range sitemapURLs {
+		lastmod := p.siteUpdated
+		if u.path == "/privacy" || u.path == "/terms" {
+			lastmod = legalUpdated
+		}
+		b.WriteString("  <url>\n")
+		fmt.Fprintf(&b, "    <loc>%s%s</loc>\n", base, u.path)
+		if lastmod != "" {
+			fmt.Fprintf(&b, "    <lastmod>%s</lastmod>\n", lastmod)
+		}
+		fmt.Fprintf(&b, "    <changefreq>%s</changefreq>\n    <priority>%s</priority>\n", u.freq, u.prio)
+		b.WriteString("  </url>\n")
 	}
 	b.WriteString("</urlset>\n")
 	c.Data(http.StatusOK, "application/xml; charset=utf-8", []byte(b.String()))

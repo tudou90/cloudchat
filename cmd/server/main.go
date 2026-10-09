@@ -111,14 +111,11 @@ func main() {
 	r.StaticFile("/favicon.ico", "./static/favicon.ico")
 	r.StaticFile("/apple-touch-icon.png", "./static/apple-touch-icon.png")
 
-	// Vue App (Built). Unknown /chat/ paths (e.g. /chat/secret/:id) fall
-	// back to index.html so the app can route them.
-	r.Static("/chat", "./frontend/dist")
-	r.NoRoute(func(c *gin.Context) {
-		if c.Request.Method == "GET" && strings.HasPrefix(c.Request.URL.Path, "/chat/") {
-			c.File("./frontend/dist/index.html")
-		}
-	})
+	// Vue App (Built). Its pages (/chat/, /chat/secret, /chat/secret/:id)
+	// are index.html with per-page meta tags so the app can route them.
+	chatApp := pages.ChatApp("./frontend/dist")
+	r.GET("/chat/*filepath", chatApp)
+	r.HEAD("/chat/*filepath", chatApp)
 
 	// API
 	api := r.Group("/api")
