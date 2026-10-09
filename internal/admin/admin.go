@@ -288,22 +288,23 @@ func listRooms(out io.Writer, opts Options) error {
 	for _, r := range rooms {
 		online += r.online
 	}
-	fmt.Fprintf(out, "%d room(s) (%s), %d person(s) online\n", len(rooms), limit, online)
+	fmt.Fprintf(out, "%d room(s) (%s), %d person(s) online — times in %s\n", len(rooms), limit, online, time.Now().Format("MST"))
 	if len(rooms) == 0 {
 		return nil
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "\nROOM\tAGE\tONLINE\tMESSAGES\tFILES\tDELETED IN")
+	fmt.Fprintln(tw, "\nROOM\tCREATED\tAGE\tONLINE\tMESSAGES\tFILES\tDELETED IN")
 	for _, r := range rooms {
-		age := "?"
+		created, age := "?", "?"
 		if r.hasAge {
+			created = r.created.Local().Format("2006-01-02 15:04")
 			age = shortDuration(time.Since(r.created))
 		}
 		files := strconv.FormatInt(r.files, 10)
 		if r.files > 0 {
 			files += fmt.Sprintf(" (%d KB)", (r.fileBytes+1023)/1024)
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%d\t%d\t%s\t%s\n", r.id, age, r.online, r.messages, files, shortDuration(r.expiresIn))
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%d\t%s\t%s\n", r.id, created, age, r.online, r.messages, files, shortDuration(r.expiresIn))
 	}
 	return tw.Flush()
 }
