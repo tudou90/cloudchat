@@ -1,0 +1,23 @@
+const {chromium}=require('playwright');
+const B=process.env.BASE_URL, S=process.env.ARTIFACTS_DIR;
+const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m); if(!c) process.exitCode=1};
+(async()=>{
+  const br=await chromium.launch(); const errs=[];
+  const ctxA=await br.newContext({viewport:{width:1100,height:700}}), ctxB=await br.newContext();
+  const a=await ctxA.newPage(); a.on('pageerror',e=>errs.push(e.message));
+  await a.goto(B+'/chat/'); await a.fill('input[placeholder="Your nickname..."]','Alice'); await a.click('text=Start New Session');
+  await a.waitForSelector('text=👥 1 online'); ok(true,'creator sees 1 online');
+  const b=await ctxB.newPage(); await b.goto(a.url()); await b.fill('input[placeholder="Your nickname..."]','Bob'); await b.press('input[placeholder="Your nickname..."]','Enter');
+  await a.waitForSelector('text=👥 2 online'); await b.waitForSelector('text=👥 2 online'); ok(true,'both see 2 online');
+  const a2=await ctxA.newPage(); await a2.goto(a.url()); await a2.fill('input[placeholder="Your nickname..."]','Alice'); await a2.press('input[placeholder="Your nickname..."]','Enter');
+  await a2.waitForSelector('text=Live Session'); await a.waitForTimeout(500);
+  ok(await a.isVisible('text=👥 2 online')&&await b.isVisible('text=👥 2 online'),'Alice in a 2nd tab still counts as one person');
+  await a.click('text=👥 2 online'); const items=await a.locator('.min-w-44 > div').allInnerTexts();
+  ok(items.length===2&&/Alice\s*\(you\)/.test(items[0])&&items[1].includes('Bob'),'member list: "Alice (you)" first, then Bob: '+JSON.stringify(items));
+  await a.waitForTimeout(300); await a.screenshot({path:S+'/presence.png'});
+  await a.mouse.click(900,600); ok(await a.locator('.min-w-44').count()===0,'click outside closes list');
+  await a2.close(); await a.waitForTimeout(500); ok(await a.isVisible('text=👥 2 online'),'closing duplicate tab keeps count at 2');
+  await b.click('text=Exit'); await a.waitForSelector('text=👥 1 online'); ok(true,'Bob exits -> 1 online');
+  await a.reload(); await a.waitForSelector('text=👥 1 online'); ok(true,'count correct after reload');
+  ok(errs.length===0,'no page errors '+errs.join('; ')); await br.close();
+})().catch(e=>{console.log('FAIL exception',e.message);process.exit(1)});

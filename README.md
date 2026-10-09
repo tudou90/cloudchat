@@ -63,5 +63,18 @@ static/              icons, fonts, images
 ## Tests
 
 ```bash
+# Unit tests
 go test ./...
+
+# End-to-end and browser tests (needs Redis, redis-cli and a built frontend)
+cd tests/e2e && npm ci && npx playwright install chromium webkit && cd ../..
+REDIS_ADDR=localhost:6379 node tests/e2e/run.mjs          # everything (~4 min)
+REDIS_ADDR=localhost:6379 node tests/e2e/run.mjs chat ui  # only suites whose name matches
 ```
+
+The e2e runner starts its own servers on ports 18200+ and uses Redis database 15
+(`E2E_REDIS_DB`), which it flushes — it refuses to run if that database isn't empty.
+Set `E2E_SKIP_BROWSER=1` to skip the browser suites. Logs and screenshots of failed
+suites land in `tests/e2e/artifacts/`.
+
+GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs all of the above on every push to `main` and on pull requests.

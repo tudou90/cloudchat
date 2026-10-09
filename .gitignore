@@ -42,3 +42,6 @@ static/site.css
 # Locally built server binaries (go build ./cmd/server)
 /server
 /cloudchat
+
+# End-to-end test output (logs, screenshots, server binary)
+tests/e2e/artifacts/

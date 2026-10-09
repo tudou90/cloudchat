@@ -1,0 +1,23 @@
+// Late joiners and history visibility, under HISTORY_FOR_NEW_MEMBERS=true|false.
+const {chromium}=require('playwright'); const B=process.env.BASE_URL, allow=process.env.HISTORY_FOR_NEW_MEMBERS==='true';
+const PNG=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64');
+const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+`[forNew=${allow}] `+m); if(!c) process.exitCode=1};
+const say=async(p,t)=>{await p.fill('input[placeholder="Transmit a message..."]',t);await p.press('input[placeholder="Transmit a message..."]','Enter')};
+const has=(p,t)=>p.locator('.animate-msg-in',{hasText:t}).count();
+(async()=>{const br=await chromium.launch(); const errs=[];
+ const a=await (await br.newContext()).newPage(), b=await (await br.newContext()).newPage(); [a,b].forEach(p=>p.on('pageerror',e=>errs.push(e.message)));
+ await a.goto(B+'/chat/'); await a.fill('input[placeholder="Your nickname..."]','Alice'); await a.click('text=Start New Session'); await a.waitForSelector('text=Live Session'); await a.waitForTimeout(300);
+ await say(a,'before-bob'); await a.setInputFiles('input[type=file]',[{name:'early.png',mimeType:'image/png',buffer:PNG}]); await a.waitForSelector('img[alt="early.png"]'); await a.waitForTimeout(300);
+ const link=a.url();
+ await b.goto(link); await b.fill('input[placeholder="Your nickname..."]','Bob'); await b.press('input[placeholder="Your nickname..."]','Enter'); await b.waitForSelector('text=Live Session'); await b.waitForTimeout(800);
+ ok((await has(b,'before-bob')===1)===allow && (await b.locator('img[alt="early.png"]').count()===1)===allow, allow?'new member sees earlier text+image':'new member does NOT see earlier text or image');
+ await say(a,'after-bob'); await b.waitForSelector('text=after-bob'); ok(true,'new member receives messages sent after joining');
+ await b.reload(); await b.waitForSelector('text=after-bob');
+ ok((await has(b,'before-bob')===1)===allow,'new member after reload: '+(allow?'still sees earlier':'sees only post-join messages'));
+ await a.reload(); await a.waitForSelector('text=after-bob');
+ ok(await has(a,'before-bob')===1&&await a.locator('img[alt="early.png"]').count()===1,'original member after reload sees everything since their join');
+ await b.click('text=Exit'); await b.goto(link); await b.fill('input[placeholder="Your nickname..."]','Bob'); await b.press('input[placeholder="Your nickname..."]','Enter');
+ await b.waitForSelector('text=after-bob'); ok((await has(b,'before-bob')===1)===allow,'Exit + rejoin keeps original join point');
+ const c=await (await br.newContext()).newPage(); await c.goto(link); await c.fill('input[placeholder="Your nickname..."]','Carol'); await c.press('input[placeholder="Your nickname..."]','Enter'); await c.waitForSelector('text=Live Session'); await c.waitForTimeout(800);
+ ok((await has(c,'after-bob')===1)===allow,'a third, later member '+(allow?'sees':"doesn't see")+' earlier messages either');
+ ok(errs.length===0,'no page errors'); await br.close();})().catch(e=>{console.log('FAIL exception',e.message);process.exit(1)});

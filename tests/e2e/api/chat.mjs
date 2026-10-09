@@ -1,0 +1,25 @@
+const B=process.env.BASE_URL, W=process.env.BASE_URL.replace(/^http/,'ws');
+const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m); if(!c) process.exitCode=1};
+const conn=(room,name)=>new Promise((res,rej)=>{const ws=new WebSocket(`${W}/ws/${room}?name=${name}`);ws.msgs=[];
+  ws.onmessage=e=>e.data.split('\n').forEach(l=>ws.msgs.push(JSON.parse(l)));ws.onopen=()=>setTimeout(()=>res(ws),200);ws.onerror=rej;});
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ok((await fetch(`${B}/api/rooms/not-a-uuid`)).status===404,'invalid room id -> 404');
+ok((await fetch(`${B}/api/rooms/00000000-0000-0000-0000-000000000000`)).status===404,'unknown room -> 404');
+const {id}=await (await fetch(`${B}/api/rooms`,{method:'POST'})).json();
+ok((await fetch(`${B}/api/rooms/${id}`)).status===200,'created room exists');
+let a=await conn(id,'alice'), b=await conn(id,'bob');
+ok(a.msgs[0]?.type==='welcome'&&a.msgs[0].senderId,'welcome carries senderId');
+a.send(JSON.stringify({type:'chat',sender:'bob',senderId:'fake',content:'hi'}));await wait(300);
+const m=b.msgs.find(x=>x.type==='chat');
+ok(m&&m.sender==='alice'&&m.senderId===a.msgs[0].senderId,'sender spoofing overridden');
+const long='中'.repeat(2000); a.send(JSON.stringify({content:long}));await wait(300);
+ok(b.msgs.some(x=>x.content===long)&&a.readyState===1,'2000 CJK chars delivered, conn alive');
+a.send(JSON.stringify({content:'x'.repeat(2001)}));await wait(300);
+ok(!b.msgs.some(x=>x.content?.length===2001),'over-limit message dropped');
+// everyone leaves, then rejoin: no duplicates
+a.close();b.close();await wait(300);
+a=await conn(id,'alice');b=await conn(id,'alice');
+a.send(JSON.stringify({content:'once'}));await wait(400);
+ok(b.msgs.filter(x=>x.content==='once').length===1,'no duplicate after room re-entry');
+ok(new Set([a.msgs[0].senderId,b.msgs[0].senderId]).size===2,'same name -> distinct ids');
+a.close();b.close();

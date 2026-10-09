@@ -1,0 +1,20 @@
+const {chromium}=require('playwright');
+const B=process.env.BASE_URL, S=process.env.ARTIFACTS_DIR;
+const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m); if(!c) process.exitCode=1};
+(async()=>{
+  const br=await chromium.launch(); const ctx=await br.newContext({viewport:{width:1280,height:800}}); const a=await ctx.newPage(); const errs=[]; a.on('pageerror',e=>errs.push(e.message));
+  await a.goto(B+'/chat/'); await a.fill('input[placeholder="Your nickname..."]','Alice'); await a.click('text=Start New Session'); await a.waitForSelector('text=Live Session'); await a.waitForTimeout(300);
+  await a.evaluate(async()=>{const c=document.createElement('canvas');c.width=1200;c.height=900;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,1200,900);gr.addColorStop(0,'#38bdf8');gr.addColorStop(1,'#f472b6');g.fillStyle=gr;g.fillRect(0,0,1200,900);g.fillStyle='#fff';g.font='bold 120px sans-serif';g.fillText('1200 x 900',250,480);
+    const blob=await new Promise(r=>c.toBlob(r,'image/png'));const dt=new DataTransfer();dt.items.add(new File([blob],'big.png',{type:'image/png'}));
+    const t=document.querySelector('.glass.rounded-3xl');for(const ev of ['dragenter','drop'])t.dispatchEvent(new DragEvent(ev,{bubbles:true,cancelable:true,dataTransfer:dt}));});
+  const thumb=a.locator('img[alt="big.png"]').first(); await thumb.waitFor(); await a.waitForFunction(()=>{const i=document.querySelector('img[alt="big.png"]');return i.complete&&i.naturalWidth>0});
+  const bb=await thumb.boundingBox(); ok(bb.width<=240&&bb.height<=160,`thumbnail ${Math.round(bb.width)}x${Math.round(bb.height)} within 240x160`);
+  await a.waitForTimeout(600); await a.screenshot({path:S+'/chat-thumb.png'});
+  await thumb.click(); const overlay=a.locator('.fixed.inset-0 img'); await overlay.waitFor();
+  const ob=await overlay.boundingBox(); ok(ob.width>bb.width*2,`preview opens in-page at ${Math.round(ob.width)}x${Math.round(ob.height)}`);
+  ok(ctx.pages().length===1&&a.url().includes('/chat/?room='),'no new tab / no navigation');
+  await a.waitForTimeout(600); await a.screenshot({path:S+'/chat-preview.png'});
+  await a.keyboard.press('Escape'); ok(await overlay.count()===0,'Esc closes preview');
+  await thumb.click(); await overlay.waitFor(); await a.mouse.click(10,10); ok(await overlay.count()===0,'backdrop click closes preview');
+  ok(errs.length===0,'no page errors '+errs.join('; ')); await br.close();
+})().catch(e=>{console.log('FAIL exception',e.message);process.exit(1)});

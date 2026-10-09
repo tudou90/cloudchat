@@ -1,0 +1,21 @@
+const P1=process.env.BASE_URL, P2=process.env.BASE_URL2;
+const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m); if(!c) process.exitCode=1};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const conn=(B,room,name)=>new Promise((res,rej)=>{const ws=new WebSocket(`${B.replace('http','ws')}/ws/${room}?name=${name}`);ws.msgs=[];
+  ws.onmessage=e=>e.data.split('\n').forEach(l=>ws.msgs.push(JSON.parse(l)));ws.onopen=()=>setTimeout(()=>res(ws),300);ws.onerror=rej;});
+const last=ws=>ws.msgs.filter(m=>m.type==='presence').at(-1)?.members.map(m=>m.name).sort().join(',');
+const room=(await (await fetch(`${P1}/api/rooms`,{method:'POST'})).json()).id;
+const a=await conn(P1,room,'Alice'); ok(last(a)==='Alice','first joiner sees 1 online');
+const b=await conn(P2,room,'Bob'); await wait(200);
+ok(last(a)==='Alice,Bob'&&last(b)==='Alice,Bob','join on other server -> both see 2');
+a.send(JSON.stringify({content:'hi'})); await wait(200);
+b.close(); await wait(400); ok(last(a)==='Alice','Bob leaves -> Alice sees 1');
+const c=await conn(P1,room,'Carol');
+const h=c.msgs.find(m=>m.type==='history'); ok(h&&h.messages.every(m=>m.type!=='presence'),'presence never stored in history');
+ok(a.msgs.filter(m=>m.type==='presence').every(p=>p.members.every(m=>m.id&&m.name&&!('token' in m))),'presence has id+name only (no tokens)');
+// burst: 6 clients join concurrently, final snapshot must be exact everywhere
+const burst=await Promise.all(Array.from({length:6},(_,i)=>conn(i%2?P1:P2,room,'u'+i))); await wait(500);
+const all=[a,c,...burst]; ok(all.every(w=>w.msgs.filter(m=>m.type==='presence').at(-1).members.length===8),'concurrent joins across servers converge on 8 everywhere');
+await Promise.all(burst.map(w=>w.close())); await wait(500);
+ok(last(a)==='Alice,Carol'&&last(c)==='Alice,Carol','concurrent leaves converge on 2');
+a.close();c.close();
