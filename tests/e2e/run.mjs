@@ -33,6 +33,8 @@ const SUITES = [
   { name: 'presence', script: 'api/presence.mjs', servers: 2, env: { ...off, HISTORY_FOR_NEW_MEMBERS: 'true' } },
   { name: 'presence-heal', script: 'api/heal.mjs', env: off },
   { name: 'shutdown-and-crash', script: 'api/ghost.mjs', servers: 0, env: {} },
+  { name: 'hardening-http', script: 'api/hardening.mjs', env: off },
+  { name: 'hardening-https', script: 'api/hardening.mjs', env: { ...off, PUBLIC_URL: 'https://chat.example.test' } },
   { name: 'ratelimit-trusted-proxy', script: 'api/ratelimit.mjs', args: ['trusted'], env: { TRUSTED_PROXIES: '127.0.0.1,::1' } },
   { name: 'ratelimit-spoofed-xff', script: 'api/ratelimit.mjs', args: ['untrusted'], env: {} },
   { name: 'ratelimit-disabled', script: 'api/ratelimit.mjs', args: ['disabled'], env: off },
@@ -50,6 +52,7 @@ const SUITES = [
   { name: 'ui-homepage', script: 'browser/home-shots.js', browser: true, env: off },
   { name: 'ui-mobile', script: 'browser/mobile-check.js', browser: true, env: off },
   { name: 'ui-rate-limits', script: 'browser/ratelimit-ui.js', browser: true, env: {} },
+  { name: 'ui-reconnect', script: 'browser/reconnect-ui.js', browser: true, servers: 0, env: {} },
 ];
 
 const redis = cmd => execSync(`${REDIS_CLI} ${cmd}`).toString().trim();

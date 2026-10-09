@@ -64,7 +64,14 @@ func main() {
 	}
 
 	// 4. Setup Router
-	r := gin.Default()
+	https := strings.HasPrefix(cfg.PublicURL, "https://")
+	h.SecureCookies = https
+	if https {
+		log.Println("Serving as HTTPS (PUBLIC_URL): secure cookies and HSTS enabled")
+	}
+
+	r := gin.New()
+	r.Use(gin.Recovery(), http.AccessLog(), http.SecurityHeaders(https))
 	// Only believe X-Forwarded-For from configured proxies; otherwise clients
 	// could fake their IP and dodge rate limits.
 	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
@@ -77,6 +84,7 @@ func main() {
 	r.GET("/changelog", pages.Changelog)
 	r.GET("/news", func(c *gin.Context) { c.Redirect(nethttp.StatusMovedPermanently, "/changelog") })
 	r.GET("/robots.txt", pages.Robots)
+	r.GET("/healthz", http.Health)
 	r.GET("/sitemap.xml", pages.Sitemap)
 	r.StaticFile("/site.webmanifest", "./static/site.webmanifest")
 	r.Static("/static", "./static")

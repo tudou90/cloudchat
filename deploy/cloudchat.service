@@ -1,0 +1,42 @@
+# /etc/systemd/system/cloudchat.service
+[Unit]
+Description=CloudChat (temporary chat rooms)
+After=network-online.target redis-server.service
+Wants=network-online.target redis-server.service
+
+[Service]
+Type=simple
+User=cloudchat
+Group=cloudchat
+# The server reads templates/, static/, frontend/dist/ and .env relative to here.
+WorkingDirectory=/opt/cloudchat
+ExecStart=/opt/cloudchat/cloudchat
+Environment=GIN_MODE=release
+
+# SIGTERM triggers a graceful shutdown: clients are removed from their rooms
+# (keeping presence and the empty-room countdown correct) and disconnected;
+# browsers then reconnect automatically.
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=always
+RestartSec=2
+
+LimitNOFILE=65536
+
+# Hardening: the app only needs to read its directory and talk to the network.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

@@ -126,11 +126,11 @@
         <div class="flex items-center gap-2 sm:gap-3 min-w-0">
           <div
             class="w-2.5 h-2.5 rounded-full shrink-0"
-            :class="connected ? 'bg-emerald-400 animate-pulse-glow' : 'bg-red-400'"
+            :class="connected ? 'bg-emerald-400 animate-pulse-glow' : reconnecting ? 'bg-amber-400 animate-pulse' : 'bg-red-400'"
           ></div>
           <!-- On phones the green dot alone says "live"; the text only shows when disconnected. -->
           <h2 class="font-semibold text-white whitespace-nowrap" :class="{ 'hidden sm:block': connected }">
-            {{ connected ? 'Live Session' : 'Disconnected' }}
+            {{ connected ? 'Live Session' : reconnecting ? 'Reconnecting…' : 'Disconnected' }}
           </h2>
           <div v-if="connected && members.length" class="relative">
             <button
@@ -390,13 +390,17 @@ const initWebSocket = (roomId: string) => {
   const ws = new WebSocket(url)
   socket.value = ws
 
-  let opened = false
-  ws.onopen = () => { opened = true; connected.value = true }
+  ws.onopen = () => {
+    connected.value = true
+    if (reconnecting.value) notice.value = ''
+    reconnecting.value = false
+    reconnectAttempts = 0
+  }
   ws.onclose = () => {
-    if (socket.value !== ws) return
+    if (socket.value !== ws) return // we closed it on purpose (Exit)
     connected.value = false
     members.value = []
-    if (!opened) notice.value = 'Could not connect. You may have too many tabs open or be reconnecting too often — wait a moment and refresh.'
+    scheduleReconnect()
   }
   ws.onmessage = (e) => {
     e.data.split('\n').forEach((line: string) => {
@@ -494,7 +498,48 @@ const onDrop = (e: DragEvent) => {
   if (e.dataTransfer?.files.length) uploadFiles(e.dataTransfer.files)
 }
 
+// Automatic reconnect: after a network drop or a server restart, keep the
+// conversation on screen and reconnect with backoff (1s, 2s, 4s … 15s).
+// History arriving on reconnect is merged by message ID, so nothing doubles.
+const reconnecting = ref(false)
+let reconnectAttempts = 0
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+
+const scheduleReconnect = () => {
+  clearTimeout(reconnectTimer)
+  reconnecting.value = true
+  notice.value = 'Connection lost — reconnecting…'
+  const delay = Math.min(15000, 1000 * 2 ** reconnectAttempts++)
+  reconnectTimer = setTimeout(reconnectNow, delay)
+}
+
+const reconnectNow = async () => {
+  clearTimeout(reconnectTimer)
+  const room = currentRoom.value
+  if (!joined.value || !room || connected.value) return
+  try {
+    await axios.get(`/api/rooms/${encodeURIComponent(room)}`)
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      reconnecting.value = false
+      notice.value = 'This session has ended — everyone left and it was deleted.'
+      try { sessionStorage.removeItem(ACTIVE_ROOM_KEY) } catch {}
+      return
+    }
+    scheduleReconnect() // server unreachable or rate-limited: try again later
+    return
+  }
+  if (joined.value && currentRoom.value === room && !connected.value) initWebSocket(room)
+}
+
+// Reconnect right away when the device comes back online or the tab returns.
+const onOnline = () => { if (reconnecting.value) { reconnectAttempts = 0; reconnectNow() } }
+const onVisible = () => { if (document.visibilityState === 'visible') onOnline() }
+
 const leaveRoom = () => {
+  clearTimeout(reconnectTimer)
+  reconnecting.value = false
+  reconnectAttempts = 0
   const ws = socket.value
   socket.value = null
   ws?.close()
@@ -531,10 +576,17 @@ const copyInvite = async () => {
   }
 }
 
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('online', onOnline)
+  document.removeEventListener('visibilitychange', onVisible)
+  clearTimeout(reconnectTimer)
+})
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('online', onOnline)
+  document.addEventListener('visibilitychange', onVisible)
   const queryRoom = new URLSearchParams(location.search).get('room')
   if (queryRoom) {
     joinId.value = queryRoom

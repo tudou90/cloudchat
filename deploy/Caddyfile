@@ -1,0 +1,21 @@
+# /etc/caddy/Caddyfile — Caddy gets and renews the HTTPS certificate itself.
+# Replace chat.example.com with your domain (its DNS A/AAAA record must point
+# at this server, and ports 80 and 443 must be open).
+chat.example.com {
+	encode zstd gzip
+
+	# Files are limited to 10 MB by the app; allow a little multipart overhead.
+	request_body {
+		max_size 12MB
+	}
+
+	# Caddy passes Host, X-Forwarded-For and X-Forwarded-Proto and proxies
+	# WebSockets automatically. No access log is configured on purpose: the
+	# app writes its own, with room/file/secret IDs removed.
+	reverse_proxy 127.0.0.1:8080
+}
+
+# Redirect www to the bare domain (optional).
+www.chat.example.com {
+	redir https://chat.example.com{uri} permanent
+}

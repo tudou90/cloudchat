@@ -39,6 +39,9 @@ const (
 type Handler struct {
 	Hub     *ws.Hub
 	Protect Protection
+	// SecureCookies marks cookies Secure. Set it when the public site is
+	// HTTPS: behind a reverse proxy the request itself arrives as plain HTTP.
+	SecureCookies bool
 }
 
 func NewHandler(hub *ws.Hub, protect Protection) *Handler {
@@ -47,7 +50,7 @@ func NewHandler(hub *ws.Hub, protect Protection) *Handler {
 
 // ensureIdentity sets the identity cookie if the browser doesn't have one yet.
 // It is called on the room endpoints the client hits before opening a WebSocket.
-func ensureIdentity(c *gin.Context) {
+func (h *Handler) ensureIdentity(c *gin.Context) {
 	if v, err := c.Cookie(identityCookie); err == nil && len(v) == 64 {
 		return
 	}
@@ -56,7 +59,7 @@ func ensureIdentity(c *gin.Context) {
 		return
 	}
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(identityCookie, hex.EncodeToString(raw), identityCookieMaxAge, "/", "", c.Request.TLS != nil, true)
+	c.SetCookie(identityCookie, hex.EncodeToString(raw), identityCookieMaxAge, "/", "", h.SecureCookies || c.Request.TLS != nil, true)
 }
 
 // senderID derives the public sender ID from the identity cookie, falling
@@ -74,7 +77,7 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 	if h.storageFull(c) {
 		return
 	}
-	ensureIdentity(c)
+	h.ensureIdentity(c)
 	roomID := uuid.New().String()
 	if err := database.RDB.Set(database.Ctx, ws.RoomKey(roomID), 1, h.Hub.RoomTTL).Err(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create room"})
@@ -84,7 +87,7 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 }
 
 func (h *Handler) GetRoom(c *gin.Context) {
-	ensureIdentity(c)
+	h.ensureIdentity(c)
 	roomID := c.Param("id")
 	if !h.roomExists(roomID) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Room not found"})

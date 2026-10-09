@@ -45,6 +45,8 @@ Settings come from environment variables or a `.env` file (real environment vari
 | `REDIS_ADDR` / `REDIS_PASSWORD` | Where Redis lives |
 | `STORAGE_LIMIT_MB` | Stop new rooms/files/secrets before Redis runs out of memory |
 
+To deploy on a Linux server with systemd and HTTPS, follow [deploy/README.md](deploy/README.md).
+
 Secret notes need HTTPS (browsers only expose the Web Crypto API on secure origins, plus `localhost`).
 
 ## Layout
