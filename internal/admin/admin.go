@@ -12,8 +12,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"cloudchat/internal/database"
@@ -21,6 +23,7 @@ import (
 	"cloudchat/internal/service"
 	"cloudchat/internal/transport/ws"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // ClosedNotice is what people in a room see when a moderator closes it.
@@ -29,6 +32,7 @@ const ClosedNotice = "This session was closed for violating our Terms of Service
 const usage = `Usage: cloudchat admin <command>
 
 Rooms (accept an invite link or a room ID):
+  room list                   all rooms: age, online, messages, files
   room show   <link>          who is in it, how many messages, which files
   room export <link> <dir>    save its messages and files to <dir> (evidence)
   room delete <link> [--yes]  delete it now and disconnect everyone in it
@@ -40,8 +44,16 @@ Secret notes (accept a note link or ID; their content can't be read):
 Run from the directory with .env (e.g. cd /opt/cloudchat && sudo ./cloudchat admin …).
 `
 
+// Options are the server settings admin commands report on.
+type Options struct {
+	MaxRooms int // MAX_ROOMS, 0 = unlimited
+}
+
 // Run executes an admin command; out receives the report, in answers prompts.
-func Run(args []string, in io.Reader, out io.Writer) error {
+func Run(args []string, in io.Reader, out io.Writer, opts Options) error {
+	if len(args) == 2 && args[0] == "room" && args[1] == "list" {
+		return listRooms(out, opts)
+	}
 	if len(args) < 2 {
 		fmt.Fprint(out, usage)
 		return errors.New("missing command")
@@ -214,6 +226,103 @@ func loadRoom(roomID string) (*roomInfo, error) {
 		info.Files = append(info.Files, roomFile{ID: id, Name: fmt.Sprint(vals[0]), Mime: fmt.Sprint(vals[1]), Size: size})
 	}
 	return info, nil
+}
+
+type roomSummary struct {
+	id        string
+	created   time.Time
+	hasAge    bool
+	expiresIn time.Duration
+	online    int
+	messages  int64
+	files     int64
+	fileBytes int64
+}
+
+func listRooms(out io.Writer, opts Options) error {
+	ids, err := ws.ListRooms()
+	if err != nil {
+		return err
+	}
+	rooms := make([]roomSummary, 0, len(ids))
+	for _, id := range ids {
+		keys := ws.RoomKeys(id) // members, files, meta, history, filebytes, ...
+		pipe := database.RDB.Pipeline()
+		members := pipe.HVals(database.Ctx, keys[0])
+		files := pipe.SCard(database.Ctx, keys[1])
+		ttl := pipe.PTTL(database.Ctx, keys[2])
+		msgs := pipe.LLen(database.Ctx, keys[3])
+		bytes := pipe.Get(database.Ctx, keys[4])
+		if _, err := pipe.Exec(database.Ctx); err != nil && !errors.Is(err, redis.Nil) {
+			return err
+		}
+		if ttl.Val() < 0 && ttl.Val() != -1 {
+			continue // expired while listing
+		}
+		r := roomSummary{id: id, expiresIn: ttl.Val(), messages: msgs.Val(), files: files.Val()}
+		r.fileBytes, _ = bytes.Int64()
+		r.created, r.hasAge = ws.RoomCreatedAt(id)
+		seen := map[string]bool{}
+		for _, v := range members.Val() {
+			var m models.Member
+			if json.Unmarshal([]byte(v), &m) == nil && !seen[m.ID] {
+				seen[m.ID] = true
+			}
+		}
+		r.online = len(seen)
+		rooms = append(rooms, r)
+	}
+	// Busiest first, then newest.
+	sort.Slice(rooms, func(i, j int) bool {
+		if rooms[i].online != rooms[j].online {
+			return rooms[i].online > rooms[j].online
+		}
+		return rooms[i].created.After(rooms[j].created)
+	})
+
+	limit := "unlimited"
+	if opts.MaxRooms > 0 {
+		limit = fmt.Sprintf("limit %d", opts.MaxRooms)
+	}
+	online := 0
+	for _, r := range rooms {
+		online += r.online
+	}
+	fmt.Fprintf(out, "%d room(s) (%s), %d person(s) online\n", len(rooms), limit, online)
+	if len(rooms) == 0 {
+		return nil
+	}
+	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "\nROOM\tAGE\tONLINE\tMESSAGES\tFILES\tDELETED IN")
+	for _, r := range rooms {
+		age := "?"
+		if r.hasAge {
+			age = shortDuration(time.Since(r.created))
+		}
+		files := strconv.FormatInt(r.files, 10)
+		if r.files > 0 {
+			files += fmt.Sprintf(" (%d KB)", (r.fileBytes+1023)/1024)
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%d\t%s\t%s\n", r.id, age, r.online, r.messages, files, shortDuration(r.expiresIn))
+	}
+	return tw.Flush()
+}
+
+// shortDuration renders a duration as e.g. "45s", "12m", "3h20m", "2d4h".
+func shortDuration(d time.Duration) string {
+	if d < 0 {
+		return "-"
+	}
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh%02dm", int(d.Hours()), int(d.Minutes())%60)
+	default:
+		return fmt.Sprintf("%dd%dh", int(d.Hours())/24, int(d.Hours())%24)
+	}
 }
 
 func showRoom(roomID string, out io.Writer) error {

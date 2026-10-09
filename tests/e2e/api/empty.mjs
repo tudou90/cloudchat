@@ -33,6 +33,6 @@ await wait(2500);
 ok(keys(room).length===0,'after grace: no keys left in Redis for this room');
 ok((await fetch(`${P1}/api/rooms/${room}`)).status===404,'invite link now -> 404 (room gone)');
 ok((await fetch(P1+info.url)).status===404,'file gone');
-// creator who never joins: room still lives full TTL (unchanged behaviour)
+// a room nobody ever joins is deleted like an empty one
 const r2=(await (await fetch(`${P1}/api/rooms`,{method:'POST'})).json()).id;
-ok(+rc(`pttl room:${r2}:meta`)>3600_000,'created-but-never-joined room keeps ROOM_TTL');
+{const t=+rc(`pttl room:${r2}:meta`); ok(t>0&&t<=2000,'created-but-never-joined room gets EMPTY_ROOM_TTL')}

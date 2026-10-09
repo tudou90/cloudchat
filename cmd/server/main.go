@@ -37,7 +37,7 @@ func main() {
 
 	// `cloudchat admin …`: moderation commands, then exit.
 	if len(os.Args) > 1 && os.Args[1] == "admin" {
-		if err := admin.Run(os.Args[2:], os.Stdin, os.Stdout); err != nil {
+		if err := admin.Run(os.Args[2:], os.Stdin, os.Stdout, admin.Options{MaxRooms: cfg.MaxRooms}); err != nil {
 			log.SetFlags(0)
 			log.Fatalf("admin: %v", err)
 		}
@@ -83,6 +83,13 @@ func main() {
 	// 4. Setup Router
 	https := strings.HasPrefix(cfg.PublicURL, "https://")
 	h.SecureCookies = https
+	h.MaxRooms = cfg.MaxRooms
+	if err := ws.SyncRoomRegistry(); err != nil {
+		log.Printf("Failed to sync room registry: %v", err)
+	}
+	if cfg.MaxRooms > 0 {
+		log.Printf("Room limit: at most %d rooms at once (MAX_ROOMS)", cfg.MaxRooms)
+	}
 	if https {
 		log.Println("Serving as HTTPS (PUBLIC_URL): secure cookies and HSTS enabled")
 	}

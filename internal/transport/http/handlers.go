@@ -42,6 +42,8 @@ type Handler struct {
 	// SecureCookies marks cookies Secure. Set it when the public site is
 	// HTTPS: behind a reverse proxy the request itself arrives as plain HTTP.
 	SecureCookies bool
+	// MaxRooms caps how many rooms can exist at once (0 = unlimited).
+	MaxRooms int
 }
 
 func NewHandler(hub *ws.Hub, protect Protection) *Handler {
@@ -79,7 +81,16 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 	}
 	h.ensureIdentity(c)
 	roomID := uuid.New().String()
-	if err := database.RDB.Set(database.Ctx, ws.RoomKey(roomID), 1, h.Hub.RoomTTL).Err(); err != nil {
+	// A room nobody joins is deleted like an empty one; joining extends it.
+	err := ws.CreateRoom(roomID, h.Hub.EmptyRoomTTL, h.MaxRooms)
+	if errors.Is(err, ws.ErrRoomLimit) {
+		c.Header("Retry-After", "300")
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"message": "CloudChat has reached its maximum number of active chat rooms. Please try again in a few minutes.",
+		})
+		return
+	}
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create room"})
 		return
 	}

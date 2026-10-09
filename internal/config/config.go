@@ -54,6 +54,9 @@ type Config struct {
 	// memory, keeping room for chat (FILE_STORAGE_LIMIT_MB, default 600;
 	// 0 disables; must not exceed STORAGE_LIMIT_MB).
 	FileStorageLimitMB int
+	// MaxRooms caps how many rooms can exist at once across the platform
+	// (MAX_ROOMS, default 0 = unlimited). New rooms are refused beyond it.
+	MaxRooms int
 	// Legal details shown in the Terms of Service and Privacy Policy. Pages
 	// show a highlighted placeholder for anything left empty.
 	OperatorName     string // OPERATOR_NAME, e.g. "Example LLC"
@@ -132,6 +135,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.FileStorageLimitMB, err = strconv.Atoi(getEnv("FILE_STORAGE_LIMIT_MB", "600")); err != nil || cfg.FileStorageLimitMB < 0 {
 		return nil, fmt.Errorf("invalid FILE_STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("FILE_STORAGE_LIMIT_MB"))
+	}
+	if cfg.MaxRooms, err = strconv.Atoi(getEnv("MAX_ROOMS", "0")); err != nil || cfg.MaxRooms < 0 {
+		return nil, fmt.Errorf("invalid MAX_ROOMS %q: must be a non-negative integer (0 = unlimited)", os.Getenv("MAX_ROOMS"))
 	}
 	if cfg.StorageLimitMB > 0 && cfg.FileStorageLimitMB > cfg.StorageLimitMB {
 		return nil, fmt.Errorf("FILE_STORAGE_LIMIT_MB (%d) must not exceed STORAGE_LIMIT_MB (%d)", cfg.FileStorageLimitMB, cfg.StorageLimitMB)

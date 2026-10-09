@@ -34,6 +34,7 @@ const SUITES = [
   { name: 'presence-heal', script: 'api/heal.mjs', env: off },
   { name: 'shutdown-and-crash', script: 'api/ghost.mjs', servers: 0, env: {} },
   { name: 'admin-moderation', script: 'api/admin.mjs', env: off },
+  { name: 'room-limit', script: 'api/roomlimit.mjs', env: { ...off, MAX_ROOMS: '3', EMPTY_ROOM_TTL: '2s' } },
   { name: 'hardening-http', script: 'api/hardening.mjs', env: off },
   { name: 'hardening-https', script: 'api/hardening.mjs', env: { ...off, PUBLIC_URL: 'https://chat.example.test' } },
   { name: 'ratelimit-trusted-proxy', script: 'api/ratelimit.mjs', args: ['trusted'], env: { TRUSTED_PROXIES: '127.0.0.1,::1' } },

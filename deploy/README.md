@@ -111,6 +111,7 @@ quote links, since they contain `?` and `#`:
 
 ```bash
 cd /opt/cloudchat
+sudo ./cloudchat admin room list                                              # every room: age, online, messages, files
 sudo ./cloudchat admin room show   'https://chat.example.com/chat/?room=…'   # who's there, messages, files
 sudo ./cloudchat admin room export 'https://chat.example.com/chat/?room=…' /root/evidence
 sudo ./cloudchat admin room delete 'https://chat.example.com/chat/?room=…'   # asks for confirmation

@@ -24,6 +24,8 @@ ok(r.code===0&&/Online now:\s+2/.test(r.out)&&/Alice/.test(r.out)&&/Bob/.test(r.
 ok(admin(['room','show',room]).code===0,'room show accepts a bare room ID');
 ok(admin(['room','show','not-a-room']).code!==0,'invalid room reference is rejected');
 
+r=admin(['room','list']); const row=r.out.split('\n').find(l=>l.startsWith(room))||'';
+ok(r.code===0&&/1 room\(s\) \(unlimited\), 2 person\(s\) online/.test(r.out)&&/^\S+\s+\d+s\s+2\s+2\s+1 \(1 KB\)\s+\S+$/.test(row),'room list: every room with age, online, messages, files');
 const dir=mkdtempSync(join(tmpdir(),'cc-export-')); r=admin(['room','export',link,dir]);
 const sub=readdirSync(dir)[0]; const rec=JSON.parse(readFileSync(join(dir,sub,'room.json'),'utf8')); const files=readdirSync(join(dir,sub,'files'));
 ok(r.code===0&&rec.messages.some(m=>m.content==='reported message')&&rec.files.length===1,'export writes room.json with messages and file list');
