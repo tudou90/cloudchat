@@ -50,6 +50,10 @@ type Config struct {
 	// StorageLimitMB stops new rooms, files and secrets once Redis uses this
 	// much memory (STORAGE_LIMIT_MB, default 1024; 0 disables).
 	StorageLimitMB int
+	// FileStorageLimitMB pauses file uploads (only) once Redis uses this much
+	// memory, keeping room for chat (FILE_STORAGE_LIMIT_MB, default 600;
+	// 0 disables; must not exceed STORAGE_LIMIT_MB).
+	FileStorageLimitMB int
 	// Legal details shown in the Terms of Service and Privacy Policy. Pages
 	// show a highlighted placeholder for anything left empty.
 	OperatorName     string // OPERATOR_NAME, e.g. "Example LLC"
@@ -125,6 +129,12 @@ func Load() (*Config, error) {
 	}
 	if cfg.StorageLimitMB, err = strconv.Atoi(getEnv("STORAGE_LIMIT_MB", "1024")); err != nil || cfg.StorageLimitMB < 0 {
 		return nil, fmt.Errorf("invalid STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("STORAGE_LIMIT_MB"))
+	}
+	if cfg.FileStorageLimitMB, err = strconv.Atoi(getEnv("FILE_STORAGE_LIMIT_MB", "600")); err != nil || cfg.FileStorageLimitMB < 0 {
+		return nil, fmt.Errorf("invalid FILE_STORAGE_LIMIT_MB %q: must be a non-negative integer", os.Getenv("FILE_STORAGE_LIMIT_MB"))
+	}
+	if cfg.StorageLimitMB > 0 && cfg.FileStorageLimitMB > cfg.StorageLimitMB {
+		return nil, fmt.Errorf("FILE_STORAGE_LIMIT_MB (%d) must not exceed STORAGE_LIMIT_MB (%d)", cfg.FileStorageLimitMB, cfg.StorageLimitMB)
 	}
 
 	ttl, err := time.ParseDuration(getEnv("ROOM_TTL", "24h"))

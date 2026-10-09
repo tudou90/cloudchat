@@ -23,8 +23,8 @@ sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
 # Redis
 sudo apt update && sudo apt install -y redis-server git curl
 
-# Go 1.25+ (Ubuntu's package is too old)
-curl -fsSL https://go.dev/dl/go1.25.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xz
+# Go 1.26+ (Ubuntu's package is too old)
+curl -fsSL https://go.dev/dl/go1.26.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xz
 echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh && source /etc/profile.d/go.sh
 
 # Node.js 22 (only needed to build the frontend)
@@ -102,6 +102,32 @@ journalctl -u cloudchat -f
 Access logs replace room, file and secret IDs with `:id`. To keep logs short-lived,
 set `MaxRetentionSec=7day` in `/etc/systemd/journald.conf` and run
 `sudo systemctl restart systemd-journald`.
+
+## Handling abuse reports
+
+Moderation is done on the server with the same binary — there is no web admin
+panel to attack. Run from `/opt/cloudchat` as root (so it can read `.env`), and
+quote links, since they contain `?` and `#`:
+
+```bash
+cd /opt/cloudchat
+sudo ./cloudchat admin room show   'https://chat.example.com/chat/?room=…'   # who's there, messages, files
+sudo ./cloudchat admin room export 'https://chat.example.com/chat/?room=…' /root/evidence
+sudo ./cloudchat admin room delete 'https://chat.example.com/chat/?room=…'   # asks for confirmation
+sudo ./cloudchat admin secret delete 'https://chat.example.com/chat/secret/…'
+```
+
+- `room delete` removes the room, its messages and files at once, shows everyone
+  in it "This session was closed for violating our Terms of Service", disconnects
+  them, and makes the invite link stop working.
+- **Act fast**: reported rooms delete themselves 5 minutes after everyone leaves,
+  so export first if you need to keep evidence.
+- **Child sexual abuse material**: don't open or forward it. Export the room (to
+  preserve it), delete it, and report it to NCMEC's CyberTipline
+  (https://report.cybertip.org). U.S. providers must report and preserve such
+  material; check the current requirements with a lawyer.
+- Secret notes are encrypted in the sender's browser — they can be deleted but
+  not read, by you or anyone else without the link.
 
 ## Updating
 

@@ -19,7 +19,7 @@ const (
 	// MaxFileSize is the largest file a client may upload.
 	MaxFileSize = 10 << 20
 	// MaxRoomFileBytes bounds the total upload volume per room.
-	MaxRoomFileBytes = 100 << 20
+	MaxRoomFileBytes = 50 << 20
 
 	maxFileNameLength = 200
 )

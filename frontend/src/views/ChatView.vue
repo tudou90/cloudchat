@@ -403,6 +403,7 @@ const initWebSocket = (roomId: string) => {
   }
   ws.onclose = () => {
     if (socket.value !== ws) return // we closed it on purpose (Exit)
+    if (ended.value) { connected.value = false; members.value = []; return }
     connected.value = false
     members.value = []
     scheduleReconnect()
@@ -413,6 +414,7 @@ const initWebSocket = (roomId: string) => {
       try {
         const msg = JSON.parse(line)
         if (msg.type === 'error') { flashNotice(msg.content); return }
+        if (msg.type === 'closed') { sessionClosed(msg.content); return }
         if (msg.type === 'welcome') { myId.value = msg.senderId; token.value = msg.token; return }
         if (msg.type === 'presence') {
           // You first, then everyone else alphabetically.
@@ -507,6 +509,20 @@ const onDrop = (e: DragEvent) => {
 // conversation on screen and reconnect with backoff (1s, 2s, 4s … 15s).
 // History arriving on reconnect is merged by message ID, so nothing doubles.
 const reconnecting = ref(false)
+// The session is over for good (closed by a moderator, or deleted): no reconnects.
+const ended = ref(false)
+
+// A moderator closed the room: remove its content from the screen and stop.
+const sessionClosed = (text: string) => {
+  ended.value = true
+  clearTimeout(reconnectTimer)
+  reconnecting.value = false
+  messages.value = []
+  members.value = []
+  preview.value = null
+  notice.value = text || 'This session was closed.'
+  try { sessionStorage.removeItem(ACTIVE_ROOM_KEY) } catch {}
+}
 let reconnectAttempts = 0
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -527,7 +543,8 @@ const reconnectNow = async () => {
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
       reconnecting.value = false
-      notice.value = 'This session has ended — everyone left and it was deleted.'
+      ended.value = true
+      notice.value = 'This session has ended and its messages were deleted.'
       try { sessionStorage.removeItem(ACTIVE_ROOM_KEY) } catch {}
       return
     }
@@ -543,6 +560,7 @@ const onVisible = () => { if (document.visibilityState === 'visible') onOnline()
 
 const leaveRoom = () => {
   clearTimeout(reconnectTimer)
+  ended.value = false
   reconnecting.value = false
   reconnectAttempts = 0
   const ws = socket.value

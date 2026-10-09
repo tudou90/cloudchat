@@ -172,7 +172,7 @@ func (h *Handler) UploadFile(c *gin.Context) {
 
 	// Allow some room for multipart framing around the file itself.
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, service.MaxFileSize+(1<<20))
-	if h.storageFull(c) {
+	if h.filesFull(c) {
 		return
 	}
 	fh, err := c.FormFile("file")
@@ -189,9 +189,11 @@ func (h *Handler) UploadFile(c *gin.Context) {
 		fileError(c, service.ErrFileTooLarge)
 		return
 	}
-	if ok, retry := h.Protect.Limiter.Allow(LimitUploadBytes, ratelimit.ClientKey(c), fh.Size); !ok {
-		ratelimit.Reject(c, retry)
-		return
+	for _, rule := range []ratelimit.Rule{LimitUploadBytes, LimitUploadBytesDay} {
+		if ok, retry := h.Protect.Limiter.Allow(rule, ratelimit.ClientKey(c), fh.Size); !ok {
+			ratelimit.Reject(c, retry)
+			return
+		}
 	}
 	f, err := fh.Open()
 	if err != nil {

@@ -41,10 +41,14 @@ jobs:
           go vet ./...
           go test ./...
 
+      - name: Go vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
       - name: Build frontend (type-check, chat app, site CSS)
         working-directory: frontend
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
           npm run build
 
       - name: Install e2e dependencies

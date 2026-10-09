@@ -190,14 +190,17 @@ func (cc *ConnCounter) Release(key string) {
 // configured limit, so new rooms, files and secrets can be refused before
 // Redis runs out of memory.
 type StorageGuard struct {
-	limit int64
-	used  atomic.Int64
+	limit      int64
+	filesLimit int64
+	used       atomic.Int64
 }
 
-// NewStorageGuard starts polling Redis; limitBytes <= 0 disables the guard.
-func NewStorageGuard(limitBytes int64) *StorageGuard {
-	g := &StorageGuard{limit: limitBytes}
-	if limitBytes <= 0 {
+// NewStorageGuard starts polling Redis. Full reports when memory use reaches
+// limitBytes; FilesFull reaches filesLimitBytes first, so file uploads stop
+// well before chat does. A limit <= 0 disables that check.
+func NewStorageGuard(limitBytes, filesLimitBytes int64) *StorageGuard {
+	g := &StorageGuard{limit: limitBytes, filesLimit: filesLimitBytes}
+	if limitBytes <= 0 && filesLimitBytes <= 0 {
 		return g
 	}
 	g.refresh()
@@ -224,5 +227,11 @@ func (g *StorageGuard) refresh() {
 	}
 }
 
-// Full reports whether Redis memory use has reached the limit.
+// Full reports whether Redis memory use has reached the overall limit.
 func (g *StorageGuard) Full() bool { return g.limit > 0 && g.used.Load() >= g.limit }
+
+// FilesFull reports whether new file uploads should be refused: memory use
+// has reached the (lower) file limit, or the overall limit.
+func (g *StorageGuard) FilesFull() bool {
+	return g.Full() || (g.filesLimit > 0 && g.used.Load() >= g.filesLimit)
+}

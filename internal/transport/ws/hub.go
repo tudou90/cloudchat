@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -178,14 +179,65 @@ func originChecker(allowed []string) func(r *http.Request) bool {
 
 func (h *Hub) broadcast(roomID string, payload []byte) {
 	h.Mu.Lock()
-	defer h.Mu.Unlock()
+	var closing []*Client
+	isClose := bytes.HasPrefix(payload, closedPrefix)
 	for client := range h.Rooms[roomID] {
 		select {
 		case client.Send <- payload:
 		default:
 		}
+		if isClose {
+			closing = append(closing, client)
+		}
+	}
+	h.Mu.Unlock()
+	// A moderator closed the room: disconnect everyone in it on this server
+	// (the notice queued above is delivered before the connection closes).
+	if len(closing) > 0 {
+		go func() {
+			for _, c := range closing {
+				h.UnregisterClient(c)
+			}
+		}()
 	}
 }
+
+// closedPrefix starts the JSON of a "closed" message (see CloseRoom).
+var closedPrefix = []byte(`{"type":"closed"`)
+
+// RoomKeys lists the Redis keys holding a room's data (files and client
+// tokens are found through the files set and members hash).
+func RoomKeys(roomID string) []string { return roomDataKeys(roomID) }
+
+// CloseRoom permanently deletes a room — messages, files, members — in one
+// atomic step, and tells everyone connected (on any server) that it was
+// closed; their clients disconnect and don't reconnect. It reports whether
+// the room existed and how many files were deleted.
+func CloseRoom(roomID, notice string) (existed bool, files int64, err error) {
+	payload, _ := json.Marshal(struct {
+		Type    string `json:"type"`
+		Content string `json:"content"`
+	}{"closed", notice})
+	res, err := closeRoomLua.Run(database.Ctx, database.RDB, roomDataKeys(roomID),
+		service.FileKeyPrefix(roomID), clientKey(""), channelPrefix+roomID, payload).Int64Slice()
+	if err != nil {
+		return false, 0, err
+	}
+	return res[0] == 1, res[1], nil
+}
+
+// closeRoomLua deletes every key of a room, including each file and each
+// member's client token, then publishes the "closed" notice.
+// KEYS: roomDataKeys. ARGV: file key prefix, client key prefix, channel, payload.
+var closeRoomLua = redis.NewScript(`
+local files = 0
+for _, id in ipairs(redis.call('SMEMBERS', KEYS[2])) do files = files + redis.call('DEL', ARGV[1] .. id) end
+for _, tok in ipairs(redis.call('HKEYS', KEYS[1])) do redis.call('DEL', ARGV[2] .. tok) end
+local existed = redis.call('EXISTS', KEYS[3])
+for i = 1, #KEYS do redis.call('DEL', KEYS[i]) end
+redis.call('PUBLISH', ARGV[3], ARGV[4])
+return {existed, files}
+`)
 
 func (h *Hub) RegisterClient(c *Client) {
 	h.presenceMu.Lock()
@@ -492,6 +544,8 @@ return 1
 // KEYS: roomDataKeys. ARGV: now ms, stale ms, client key prefix, channel,
 // JSON array of [token, member JSON] for this server's live members.
 var heartbeatLua = redis.NewScript(publishPresenceLua + `
+-- The room was deleted (e.g. closed by a moderator): don't recreate it.
+if redis.call('EXISTS', KEYS[3]) == 0 then return 0 end
 local changed = false
 for _, m in ipairs(cjson.decode(ARGV[5])) do
   if redis.call('HSETNX', KEYS[1], m[1], m[2]) == 1 then changed = true end

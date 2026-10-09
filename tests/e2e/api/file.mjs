@@ -41,10 +41,10 @@ ok((await fetch(`${B}/api/rooms/${room}/files/nope`)).status===404,'malformed fi
 a.send(JSON.stringify({type:'file',content:'x',file:{id:'f',name:'fake',url:'https://evil'}}));await wait(300);
 const forged=b.msgs.at(-1); ok(forged.type==='chat'&&!forged.file,'client cannot forge file message via WS');
 
-// quota: 100MB per room (already used ~10MB above)
+// quota: 50MB per room
 const q=await newRoom(), qa=await conn(q,'Q'); const st=[];
-for(let i=0;i<11;i++) st.push((await up(q,qa.token,new Uint8Array(10*1024*1024),`q${i}.bin`)).status);
-ok(st.slice(0,10).every(s=>s===200)&&st[10]===413,'room quota: 10x10MB ok, 11th -> 413 ('+st.join()+')');
+for(let i=0;i<6;i++) st.push((await up(q,qa.token,new Uint8Array(10*1024*1024),`q${i}.bin`)).status);
+ok(st.slice(0,5).every(s=>s===200)&&st[5]===413,'room quota: 5x10MB ok, 6th -> 413 ('+st.join()+')');
 
 a.close();await wait(300); ok((await up(room,a.token,PNG,'late.png')).status===403,'token revoked after disconnect');
 b.close();qa.close();

@@ -44,10 +44,15 @@ if(mode==='trusted'){
   u.close();
   // upload bytes: 200MB/hour across rooms (room quota is 100MB, so use 3 rooms)
   const big=new Uint8Array(10*1024*1024); const bs=[];
-  for(const n of [8,8,5]){const r=await newRoom('198.51.100.10');const w=await conn(r,'198.51.100.11');for(let i=0;i<n;i++)bs.push((await up(r,w.msgs[0].token,'198.51.100.11',big,'b.bin')).status);w.close();}
-  ok(bs.slice(0,20).every(s=>s===200)&&bs[20]===429,`upload volume: 20x10MB ok, 21st (over 200MB/h) -> ${bs[20]}`);
+  for(const n of [5,5,1]){const r=await newRoom('198.51.100.10');const w=await conn(r,'198.51.100.11');for(let i=0;i<n;i++)bs.push((await up(r,w.msgs[0].token,'198.51.100.11',big,'b.bin')).status);w.close();}
+  ok(bs.slice(0,10).every(s=>s===200)&&bs[10]===429,`upload volume: 10x10MB ok, 11th (over 100MB/h) -> ${bs[10]}`);
   const ur=await (await (async()=>{const r=await newRoom('198.51.100.12');const w=await conn(r,'198.51.100.11');const x=await up(r,w.msgs[0].token,'198.51.100.11',big,'c.bin');w.close();return x})()).json();
   ok(/try again/.test(ur.message||''),'byte-limit refusal explains when to retry');
+  // daily cap (300MB): simulate 295MB already uploaded today by this client
+  execSync(`${process.env.REDIS_CLI} set rl:upload-bytes-day:198.51.100.15 ${295*1024*1024} px 86400000`);
+  {const r=await newRoom('198.51.100.15');const w=await conn(r,'198.51.100.15');
+   const small=await up(r,w.msgs[0].token,'198.51.100.15',new Uint8Array(4*1024*1024),'s.bin'); const over=await up(r,w.msgs[0].token,'198.51.100.15',new Uint8Array(4*1024*1024),'t.bin'); w.close();
+   ok(small.status===200&&over.status===429,`daily upload cap: 295+4MB ok, +4MB more (over 300MB/day) -> ${over.status}`);}
 
   // secrets: 20 creates / 10 min; reveal 30/min
   const sec=JSON.stringify({ciphertext:'AAAA',iv:'AAAAAAAAAAAAAAAA',salt:'AAAAAAAAAAAAAAAAAAAAAA==',iterations:600000,auth:'A'.repeat(43)+'=',ttl:'1d'});
@@ -65,6 +70,15 @@ if(mode==='storagefull'){
   ok((await post('/api/rooms')).status===503,'storage full: new room -> 503');
   const sec=JSON.stringify({ciphertext:'AAAA',iv:'AAAAAAAAAAAAAAAA',salt:'AAAAAAAAAAAAAAAAAAAAAA==',iterations:600000,auth:'A'.repeat(43)+'=',ttl:'1d'});
   const r=await post('/api/secrets',null,sec); ok(r.status===503&&/capacity/.test((await r.json()).message),'storage full: new secret -> 503 with message');
+}
+if(mode==='filesfull'){
+  const room=await newRoom(); ok(!!room,'file storage full: rooms can still be created');
+  const w=await conn(room,null,'Alice'); const r=await up(room,w.msgs[0].token,null,'x','a.txt');
+  ok(r.status===503&&/chat still works/.test((await r.json()).message),'file storage full: upload -> 503 with message');
+  const sec=JSON.stringify({ciphertext:'AAAA',iv:'AAAAAAAAAAAAAAAA',salt:'AAAAAAAAAAAAAAAAAAAAAA==',iterations:600000,auth:'A'.repeat(43)+'=',ttl:'1d'});
+  ok((await post('/api/secrets',null,sec)).status===200,'file storage full: secrets still work');
+  const b=await conn(room,null,'Bob'); w.send(JSON.stringify({content:'still chatting'})); await wait(300);
+  ok(b.msgs.some(m=>m.content==='still chatting'),'file storage full: chat still works'); w.close(); b.close();
 }
 if(mode==='disabled'){
   const st=[];for(let i=0;i<15;i++)st.push((await post('/api/rooms')).status); ok(st.every(s=>s===200),'RATE_LIMIT=false: 15 rooms/min all allowed');

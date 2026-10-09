@@ -121,6 +121,12 @@ func CreateSecret(req *models.CreateSecretRequest) (*models.CreateSecretResponse
 	return &models.CreateSecretResponse{ID: id, ExpiresAt: time.Now().Add(ttl)}, nil
 }
 
+// DeleteSecret removes a secret note; it reports whether it existed.
+func DeleteSecret(id string) (bool, error) {
+	n, err := database.RDB.Del(database.Ctx, secretKey(id)).Result()
+	return n > 0, err
+}
+
 // GetSecretMeta returns key-derivation parameters without consuming the secret.
 func GetSecretMeta(id string) (*models.SecretMeta, error) {
 	key := secretKey(id)

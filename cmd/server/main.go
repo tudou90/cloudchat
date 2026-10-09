@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"cloudchat/internal/admin"
 	"cloudchat/internal/config"
 	"cloudchat/internal/database"
 	"cloudchat/internal/ratelimit"
@@ -34,6 +35,15 @@ func main() {
 	// 1. Initialize Database
 	database.InitRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 
+	// `cloudchat admin …`: moderation commands, then exit.
+	if len(os.Args) > 1 && os.Args[1] == "admin" {
+		if err := admin.Run(os.Args[2:], os.Stdin, os.Stdout); err != nil {
+			log.SetFlags(0)
+			log.Fatalf("admin: %v", err)
+		}
+		return
+	}
+
 	// 2. Initialize Hub
 	hub := ws.NewHub(ws.Options{
 		RoomTTL:              cfg.RoomTTL,
@@ -50,7 +60,7 @@ func main() {
 	h := http.NewHandler(hub, http.Protection{
 		Limiter: ratelimit.New(cfg.RateLimit),
 		Conns:   ratelimit.NewConnCounter(http.MaxConnsPerClient),
-		Storage: ratelimit.NewStorageGuard(int64(cfg.StorageLimitMB) << 20),
+		Storage: ratelimit.NewStorageGuard(int64(cfg.StorageLimitMB)<<20, int64(cfg.FileStorageLimitMB)<<20),
 	})
 	pages, err := http.NewPages("./templates", http.SiteInfo{
 		PublicURL:            cfg.PublicURL,
@@ -125,7 +135,19 @@ func main() {
 	// WebSocket
 	r.GET("/ws/:roomID", h.RateLimit(http.LimitWSConnect), h.ServeWS)
 
-	srv := &nethttp.Server{Addr: cfg.ServerAddr, Handler: r}
+	srv := &nethttp.Server{
+		Addr:    cfg.ServerAddr,
+		Handler: r,
+		// Timeouts stop slow or stalled clients from tying up connections
+		// (e.g. slowloris). Read/Write timeouts allow a 10 MB upload or
+		// download on a slow link; WebSockets set their own deadlines after
+		// the upgrade, so they are unaffected.
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    64 << 10,
+	}
 	go func() {
 		log.Printf("CloudChat Server starting on %s", cfg.ServerAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, nethttp.ErrServerClosed) {

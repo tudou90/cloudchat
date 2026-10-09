@@ -4,13 +4,13 @@ Free temporary chat rooms with no sign-up, and self-destructing secret notes.
 
 - **Chat rooms**: create a room, share the invite link, chat in real time, share files and images (up to 10 MB), see who's online. When everyone leaves, the room and everything in it is deleted.
 - **Secret notes**: password-protected notes encrypted in the browser (the server never sees the text or password); readable once.
-- **Abuse protection**: per-client rate limits shared across servers, per-connection message throttling, connection caps and a storage guard.
+- **Abuse protection**: per-client rate limits shared across servers, per-connection message throttling, connection caps, separate storage caps for files and chat, and `cloudchat admin` commands to inspect, export and delete reported rooms.
 
 Built with Go (Gin) + Redis (Pub/Sub, so several servers can run side by side) and Vue 3 + Tailwind CSS.
 
 ## Requirements
 
-- Go 1.25+
+- Go 1.26+
 - Node.js 22+ (to build the frontend)
 - Redis 6+ (3.0 works, but newer is recommended)
 

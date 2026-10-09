@@ -33,12 +33,15 @@ const SUITES = [
   { name: 'presence', script: 'api/presence.mjs', servers: 2, env: { ...off, HISTORY_FOR_NEW_MEMBERS: 'true' } },
   { name: 'presence-heal', script: 'api/heal.mjs', env: off },
   { name: 'shutdown-and-crash', script: 'api/ghost.mjs', servers: 0, env: {} },
+  { name: 'admin-moderation', script: 'api/admin.mjs', env: off },
   { name: 'hardening-http', script: 'api/hardening.mjs', env: off },
   { name: 'hardening-https', script: 'api/hardening.mjs', env: { ...off, PUBLIC_URL: 'https://chat.example.test' } },
   { name: 'ratelimit-trusted-proxy', script: 'api/ratelimit.mjs', args: ['trusted'], env: { TRUSTED_PROXIES: '127.0.0.1,::1' } },
   { name: 'ratelimit-spoofed-xff', script: 'api/ratelimit.mjs', args: ['untrusted'], env: {} },
   { name: 'ratelimit-disabled', script: 'api/ratelimit.mjs', args: ['disabled'], env: off },
-  { name: 'storage-guard', script: 'api/ratelimit.mjs', args: ['storagefull'], env: { STORAGE_LIMIT_MB: '1' },
+  { name: 'file-storage-guard', script: 'api/ratelimit.mjs', args: ['filesfull'], env: { STORAGE_LIMIT_MB: '1024', FILE_STORAGE_LIMIT_MB: '1' },
+    setup: () => execSync(`${REDIS_CLI} -x set e2e:filler`, { input: Buffer.alloc(2 << 20, 97) }) },
+  { name: 'storage-guard', script: 'api/ratelimit.mjs', args: ['storagefull'], env: { STORAGE_LIMIT_MB: '1', FILE_STORAGE_LIMIT_MB: '0' },
     // Guarantee Redis uses more than 1 MB, even on a fresh instance.
     setup: () => execSync(`${REDIS_CLI} -x set e2e:filler`, { input: Buffer.alloc(2 << 20, 97) }) },
 
@@ -52,6 +55,7 @@ const SUITES = [
   { name: 'ui-homepage', script: 'browser/home-shots.js', browser: true, env: off },
   { name: 'ui-mobile', script: 'browser/mobile-check.js', browser: true, env: off },
   { name: 'ui-rate-limits', script: 'browser/ratelimit-ui.js', browser: true, env: {} },
+  { name: 'ui-moderation', script: 'browser/moderation-ui.js', browser: true, env: off },
   { name: 'ui-reconnect', script: 'browser/reconnect-ui.js', browser: true, servers: 0, env: {} },
 ];
 
