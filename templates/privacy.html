@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body class="font-sans text-white min-h-screen">
+{{template "nav" .}}
+
+<main class="legal max-w-3xl mx-auto px-4 sm:px-6 py-16">
+  <h1 class="text-4xl font-semibold gradient-text mb-2">Privacy Policy</h1>
+  <p class="text-slate-500">Last updated: {{.Updated}}</p>
+
+  <p class="lead">
+    CloudChat is built to keep as little about you as possible, for as short a time as possible.
+    There are no accounts, no ads and no tracking. This policy explains exactly what we store, why,
+    and when it is deleted.
+  </p>
+
+  <h2>Who we are</h2>
+  <p>
+    CloudChat is operated by {{orTodo .Legal.OperatorName "OPERATOR_NAME"}} ("we", "us").
+    Questions about this policy: {{email .Legal.ContactEmail}}.
+  </p>
+
+  <h2>What we collect and why</h2>
+
+  <h3>Chat rooms</h3>
+  <ul>
+    <li><strong>Your nickname, messages and the files you share</strong>, so the people in the room can see them.</li>
+    <li>Rooms are <strong>not end-to-end encrypted</strong>: while a room exists, messages and files are stored on our servers in a form we could technically read. We do not read them, except when we must to investigate a report of illegal content or abuse, or when required by law.</li>
+    <li>We keep only a room's last {{.Facts.HistoryLimit}} messages. Everything in a room — messages, files and the list of who is in it — is deleted {{.Facts.EmptyRoomAfter}} after the last person leaves, or after {{.Facts.RoomIdle}} without activity, whichever comes first.</li>
+    <li>Uploaded files are stored in memory with the file name you gave them and a file type we detect.</li>
+  </ul>
+
+  <h3>Secret notes</h3>
+  <ul>
+    <li>Your note is encrypted in your browser before it is sent. The key needed to read it is part of the link (after the <code>#</code>) and your password; neither ever reaches our servers, so <strong>we cannot read your notes</strong>.</li>
+    <li>We store the encrypted note, the data your browser needs to decrypt it, a one-way hash used to check the password, and a count of wrong attempts.</li>
+    <li>A note is deleted as soon as it is opened, after {{.Facts.SecretAttempts}} wrong password attempts, or when it expires (1 day, 1 week or 1 month, as chosen by the sender).</li>
+  </ul>
+
+  <h3>Cookies and browser storage</h3>
+  <ul>
+    <li><strong>One cookie</strong> (<code>cc_identity</code>): a random value that lets us recognise your own messages after a page reload and remember when you first joined a room. It contains nothing about you, is not readable by scripts, is never used for tracking or advertising, and expires after one year. You can delete it at any time in your browser settings.</li>
+    <li>Your browser also remembers <strong>your last nickname</strong> (local storage) and <strong>the room you're in</strong> for the current tab (session storage), so you don't have to retype them. This stays on your device and is never sent to us except as part of using a room.</li>
+  </ul>
+
+  <h3>Technical and security data</h3>
+  <ul>
+    <li><strong>IP address.</strong> Used to apply fair-use limits (for example, how many rooms can be created per minute). Counters keyed by your IP address (or, for IPv6, your network prefix) are kept for at most 24 hours.</li>
+    <li><strong>Server logs</strong> record the time, your IP address, the type of request and its result. Room, file and note IDs and nicknames are removed before anything is written. Logs are kept for {{.Legal.LogRetentionDays}} days and then deleted.</li>
+  </ul>
+
+  <h3>What we don't collect</h3>
+  <p>
+    No names, email addresses, phone numbers or accounts. No analytics, advertising or social-media
+    trackers. Our pages load no third-party scripts, fonts or images.
+  </p>
+
+  <h2>How we use information</h2>
+  <p>
+    Only to run CloudChat: delivering messages and files, keeping the service secure and available,
+    preventing spam and abuse, and complying with the law. We do not sell or rent personal
+    information, and we do not use it for advertising or profiling.
+  </p>
+
+  <h2>When we share information</h2>
+  <ul>
+    <li><strong>Infrastructure providers</strong> that host our servers in the United States, under obligations to protect the data.</li>
+    <li><strong>Legal requirements.</strong> We may disclose information when required by valid legal process, or to report child sexual abuse material to the National Center for Missing &amp; Exploited Children (NCMEC) as U.S. law requires. Because content is deleted quickly, there is often nothing left to disclose.</li>
+    <li><strong>Safety.</strong> To protect people from imminent harm, or to protect the security of the service.</li>
+  </ul>
+
+  <h2>How long we keep information</h2>
+  <div class="glass rounded-2xl overflow-hidden not-prose my-6">
+    <table class="w-full text-sm text-left">
+      <thead class="text-slate-400 bg-white/5">
+        <tr><th scope="col" class="px-4 py-3 font-semibold">Data</th><th scope="col" class="px-4 py-3 font-semibold">Deleted</th></tr>
+      </thead>
+      <tbody class="divide-y divide-white/5 text-slate-300">
+        <tr><td class="px-4 py-3">Messages, files, nicknames in a room</td><td class="px-4 py-3">{{.Facts.EmptyRoomAfter | capfirst}} after everyone leaves, or after {{.Facts.RoomIdle}} of inactivity</td></tr>
+        <tr><td class="px-4 py-3">Secret notes</td><td class="px-4 py-3">When opened, after {{.Facts.SecretAttempts}} wrong passwords, or at expiry (max. 1 month)</td></tr>
+        <tr><td class="px-4 py-3">Fair-use counters (IP address)</td><td class="px-4 py-3">Within 24 hours</td></tr>
+        <tr><td class="px-4 py-3">Server logs (IP address, no IDs)</td><td class="px-4 py-3">After {{.Legal.LogRetentionDays}} days</td></tr>
+        <tr><td class="px-4 py-3"><code>cc_identity</code> cookie</td><td class="px-4 py-3">After 1 year, or when you clear it</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    We don't keep backups of rooms or notes: our database is held in memory and not written to disk,
+    so deleted data cannot be restored — by us or anyone else. If we receive a legal request to
+    preserve specific data, we may keep it longer as required by law.
+  </p>
+
+  <h2>Your choices and rights</h2>
+  <p>
+    You can leave a room at any time, clear the cookie and browser storage, and choose not to share
+    anything identifying. Depending on where you live (for example, in California or the European
+    Union), you may have rights to access, correct or delete personal information about you. Since we
+    don't know who our users are, we usually cannot link data to a specific person — but contact us
+    at {{email .Legal.ContactEmail}} and we will help where we can.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    CloudChat is not intended for children under 13, or under the minimum age required in your
+    country. We do not knowingly collect personal information from children. If you believe a child
+    has given us personal information, contact us and we will delete it.
+  </p>
+
+  <h2>Security</h2>
+  <p>
+    We use HTTPS for all traffic, encrypt secret notes in the browser, keep our database reachable only
+    from our own servers, and limit what we store in the first place. No system is perfectly secure,
+    so please don't share anything in a chat room you couldn't afford to have exposed — use a secret
+    note for sensitive information.
+  </p>
+
+  <h2>International users</h2>
+  <p>
+    CloudChat is operated from and hosted in the United States. If you use it from elsewhere, your
+    information is processed in the United States.
+  </p>
+
+  <h2>Changes to this policy</h2>
+  <p>
+    If we change this policy, we'll update the date at the top of this page. Significant changes will
+    also be announced in our <a href="/changelog">changelog</a>.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}<br>
+    {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}}<br>
+    {{email .Legal.ContactEmail}}
+  </p>
+</main>
+
+{{template "footer" .}}
+</body>
+</html>

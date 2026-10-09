@@ -58,6 +58,13 @@ func main() {
 		EmptyRoomTTL:         cfg.EmptyRoomTTL,
 		HistoryLimit:         cfg.HistoryLimit,
 		HistoryForNewMembers: cfg.HistoryForNewMembers,
+		Legal: http.LegalInfo{
+			OperatorName:     cfg.OperatorName,
+			OperatorAddress:  cfg.OperatorAddress,
+			ContactEmail:     cfg.ContactEmail,
+			GoverningState:   cfg.GoverningState,
+			LogRetentionDays: cfg.LogRetentionDays,
+		},
 	})
 	if err != nil {
 		log.Fatalf("Failed to load page templates: %v", err)
@@ -82,6 +89,8 @@ func main() {
 	// Marketing pages (server-rendered) and SEO files
 	r.GET("/", pages.Index)
 	r.GET("/changelog", pages.Changelog)
+	r.GET("/terms", pages.Terms)
+	r.GET("/privacy", pages.Privacy)
 	r.GET("/news", func(c *gin.Context) { c.Redirect(nethttp.StatusMovedPermanently, "/changelog") })
 	r.GET("/robots.txt", pages.Robots)
 	r.GET("/healthz", http.Health)

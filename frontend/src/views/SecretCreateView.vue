@@ -54,6 +54,11 @@
         >
           {{ busy ? 'Encrypting...' : 'Create Secret Link' }}
         </button>
+        <p class="text-xs text-slate-600 text-center">
+          By creating a note you agree to our
+          <a href="/terms" class="underline hover:text-slate-400">Terms</a> and
+          <a href="/privacy" class="underline hover:text-slate-400">Privacy Policy</a>.
+        </p>
       </div>
 
       <!-- Result -->

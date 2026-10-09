@@ -61,9 +61,11 @@
       <nav class="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
         <a href="/chat/" class="hover:text-slate-300 transition">Start a chat room</a>
         <a href="/chat/secret" class="hover:text-slate-300 transition">Send a secret note</a>
-        <a href="/#privacy" class="hover:text-slate-300 transition">Privacy</a>
         <a href="/#faq" class="hover:text-slate-300 transition">FAQ</a>
         <a href="/changelog" class="hover:text-slate-300 transition">Changelog</a>
+        <a href="/terms" class="hover:text-slate-300 transition">Terms</a>
+        <a href="/privacy" class="hover:text-slate-300 transition">Privacy Policy</a>
+        {{if .Legal.ContactEmail}}<a href="mailto:{{.Legal.ContactEmail}}?subject=Abuse%20report" class="hover:text-slate-300 transition">Report abuse</a>{{else}}<a href="/terms#report" class="hover:text-slate-300 transition">Report abuse</a>{{end}}
       </nav>
     </div>
     <div class="text-center text-slate-700 text-xs pb-8">© {{.Year}} CloudChat</div>

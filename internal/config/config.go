@@ -50,6 +50,13 @@ type Config struct {
 	// StorageLimitMB stops new rooms, files and secrets once Redis uses this
 	// much memory (STORAGE_LIMIT_MB, default 1024; 0 disables).
 	StorageLimitMB int
+	// Legal details shown in the Terms of Service and Privacy Policy. Pages
+	// show a highlighted placeholder for anything left empty.
+	OperatorName     string // OPERATOR_NAME, e.g. "Example LLC"
+	OperatorAddress  string // OPERATOR_ADDRESS, postal address (needed for DMCA notices)
+	ContactEmail     string // CONTACT_EMAIL, for privacy, legal and abuse reports
+	GoverningState   string // GOVERNING_STATE, e.g. "Delaware"
+	LogRetentionDays int    // LOG_RETENTION_DAYS, how long server logs are kept (default 7)
 	// HistoryLimit is how many recent messages per room are kept and replayed
 	// to clients that (re)join (HISTORY_LIMIT, default 200; 0 disables).
 	HistoryLimit int
@@ -99,6 +106,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid HISTORY_FOR_NEW_MEMBERS %q: must be true or false", os.Getenv("HISTORY_FOR_NEW_MEMBERS"))
 	}
 	cfg.HistoryForNewMembers = forNew
+
+	cfg.OperatorName = os.Getenv("OPERATOR_NAME")
+	cfg.OperatorAddress = os.Getenv("OPERATOR_ADDRESS")
+	cfg.ContactEmail = os.Getenv("CONTACT_EMAIL")
+	cfg.GoverningState = os.Getenv("GOVERNING_STATE")
+	if cfg.LogRetentionDays, err = strconv.Atoi(getEnv("LOG_RETENTION_DAYS", "7")); err != nil || cfg.LogRetentionDays < 1 {
+		return nil, fmt.Errorf("invalid LOG_RETENTION_DAYS %q: must be a positive integer", os.Getenv("LOG_RETENTION_DAYS"))
+	}
 
 	if cfg.RateLimit, err = strconv.ParseBool(getEnv("RATE_LIMIT", "true")); err != nil {
 		return nil, fmt.Errorf("invalid RATE_LIMIT %q: must be true or false", os.Getenv("RATE_LIMIT"))

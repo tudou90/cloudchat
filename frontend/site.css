@@ -46,3 +46,21 @@ details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
 details > summary .faq-icon { transition: transform 0.2s; }
 details[open] > summary .faq-icon { transform: rotate(45deg); }
+
+/* Legal pages (terms, privacy): readable long-form text */
+.legal .lead { color: rgb(203 213 225); font-size: 1.05rem; line-height: 1.75; margin: 1.5rem 0 0.5rem; }
+.legal h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #fff; }
+.legal h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: rgb(226 232 240); }
+.legal p, .legal li { color: rgb(148 163 184); line-height: 1.75; font-size: 0.95rem; }
+.legal p { margin: 0.75rem 0; }
+.legal ul, .legal ol { margin: 0.75rem 0; padding-left: 1.25rem; }
+.legal ul { list-style: disc; }
+.legal ol { list-style: decimal; }
+.legal li { margin: 0.35rem 0; }
+.legal strong { color: rgb(226 232 240); }
+.legal a { color: rgb(56 189 248); }
+.legal a:hover { color: rgb(125 211 252); }
+.legal code { font-size: 0.85em; background: rgba(255,255,255,0.06); padding: 0.1em 0.35em; border-radius: 0.3em; }
+.legal .caps { text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.01em; }
+/* Highlight legal details the operator hasn't configured yet */
+mark.todo { background: #facc15; color: #0f172a; padding: 0 0.3em; border-radius: 0.25em; font-weight: 600; }

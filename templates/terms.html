@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body class="font-sans text-white min-h-screen">
+{{template "nav" .}}
+
+<main class="legal max-w-3xl mx-auto px-4 sm:px-6 py-16">
+  <h1 class="text-4xl font-semibold gradient-text mb-2">Terms of Service</h1>
+  <p class="text-slate-500">Last updated: {{.Updated}}</p>
+
+  <p class="lead">
+    These terms are an agreement between you and {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}
+    ("we", "us") about your use of CloudChat, including its chat rooms and secret notes (the
+    "Service"). By using the Service you agree to these terms and to our
+    <a href="/privacy">Privacy Policy</a>. If you don't agree, please don't use the Service.
+  </p>
+
+  <h2>1. Who can use CloudChat</h2>
+  <p>
+    You must be at least 13 years old, or the minimum age required in your country to use online
+    services without parental consent, whichever is higher. If you use the Service on behalf of an
+    organization, you confirm you are allowed to accept these terms for it.
+  </p>
+
+  <h2>2. How the Service works</h2>
+  <ul>
+    <li>CloudChat is <strong>ephemeral by design</strong>. Rooms, messages and files are deleted {{.Facts.EmptyRoomAfter}} after everyone leaves a room, or after {{.Facts.RoomIdle}} without activity. Secret notes are deleted once opened or when they expire.</li>
+    <li>We keep <strong>no backups</strong>. Deleted content cannot be recovered. Don't use CloudChat as the only place you keep anything you need.</li>
+    <li>Anyone who has a room's invite link can join it and see what is posted from then on. Only share links with people you trust.</li>
+    <li>Chat rooms are not end-to-end encrypted. Secret notes are encrypted in your browser and we can't read them; if you lose the link or the password, nobody can recover the note.</li>
+    <li>We apply fair-use limits (for example on how many rooms, files or notes you can create, and on file size — currently {{.Facts.MaxFileMB}} MB) and may change them to keep the Service working for everyone.</li>
+  </ul>
+
+  <h2>3. Acceptable use</h2>
+  <p>You agree not to use CloudChat to:</p>
+  <ul>
+    <li>share child sexual abuse material or anything that sexualizes minors — we have zero tolerance and report it to the National Center for Missing &amp; Exploited Children (NCMEC) and law enforcement;</li>
+    <li>break the law, or plan, promote or help anyone else to;</li>
+    <li>threaten, harass, stalk, bully or intimidate anyone, or incite violence or hatred against people based on protected characteristics;</li>
+    <li>share other people's private information (such as addresses, ID documents or intimate images) without their consent;</li>
+    <li>infringe anyone's copyright, trademark or other rights;</li>
+    <li>send spam, scams or phishing, or share malware or other harmful code;</li>
+    <li>impersonate any person or organization in a misleading way;</li>
+    <li>probe, scan or attack the Service, get around its limits or security, overload it, or access it with automated tools in ways that burden it;</li>
+    <li>use the Service in any way that could harm us, other users or the public.</li>
+  </ul>
+
+  <h2>4. Your content</h2>
+  <p>
+    You keep all rights to the messages, files and notes you share ("your content"). You give us a
+    limited, worldwide, royalty-free license to store, transmit and display your content only as
+    needed to run the Service, for as long as it is kept under these terms. You are responsible for
+    your content and confirm that you have the right to share it and that it doesn't break these terms
+    or the law.
+  </p>
+
+  <h2 id="report">5. Reporting abuse</h2>
+  <p>
+    To report illegal content or a violation of these terms, email {{email .Legal.ContactEmail}}
+    with the invite link of the room (or the secret note link) and a short description. Because content
+    is deleted quickly, please report as soon as possible. We review reports and may remove content,
+    close rooms, block access, and preserve or report content where the law requires.
+  </p>
+
+  <h2>6. Copyright complaints (DMCA)</h2>
+  <p>
+    We respond to notices of alleged copyright infringement under the U.S. Digital Millennium Copyright
+    Act. To file a notice, send our designated agent a written communication that includes:
+  </p>
+  <ol>
+    <li>your physical or electronic signature;</li>
+    <li>identification of the copyrighted work you claim is infringed;</li>
+    <li>identification of the infringing material and information reasonably sufficient for us to locate it (for example, the room's invite link);</li>
+    <li>your name, address, telephone number and email address;</li>
+    <li>a statement that you have a good-faith belief that the use is not authorized by the copyright owner, its agent or the law; and</li>
+    <li>a statement, under penalty of perjury, that the information in your notice is accurate and that you are the copyright owner or authorized to act on its behalf.</li>
+  </ol>
+  <p>
+    Designated agent: {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}, {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}},
+    {{email .Legal.ContactEmail}}.
+  </p>
+  <p>
+    If your content was removed and you believe that was a mistake or misidentification, you may send a
+    counter-notice with the information required by 17 U.S.C. § 512(g)(3). We may block access to the
+    Service for repeat infringers.
+  </p>
+
+  <h2>7. Suspension and termination</h2>
+  <p>
+    We may remove content, close rooms, delete notes, or restrict or block access to the Service at any
+    time if we believe these terms or the law have been broken, or to protect users or the Service. You
+    may stop using CloudChat at any time. We may change, suspend or discontinue all or part of the
+    Service at any time.
+  </p>
+
+  <h2>8. Disclaimers</h2>
+  <p class="caps">
+    The Service is provided "as is" and "as available", without warranties of any kind, express or
+    implied, including warranties of merchantability, fitness for a particular purpose, non-infringement,
+    and that the Service will be uninterrupted, secure or error-free, or that content will be delivered
+    or kept. We are not responsible for content posted by users.
+  </p>
+
+  <h2>9. Limitation of liability</h2>
+  <p class="caps">
+    To the fullest extent permitted by law, we will not be liable for any indirect, incidental, special,
+    consequential or punitive damages, or for any loss of data, content, profits or goodwill, arising out
+    of or related to your use of the Service. Our total liability for any claim related to the Service is
+    limited to one hundred U.S. dollars (US$100). Some jurisdictions don't allow these limitations, so
+    they may not apply to you.
+  </p>
+
+  <h2>10. Indemnity</h2>
+  <p>
+    You agree to defend and indemnify us against claims, damages and costs (including reasonable legal
+    fees) arising from your content or your breach of these terms or the law.
+  </p>
+
+  <h2>11. Governing law</h2>
+  <p>
+    These terms are governed by the laws of the State of {{orTodo .Legal.GoverningState "GOVERNING_STATE"}}
+    and applicable U.S. federal law, without regard to conflict-of-law rules. Disputes will be resolved in
+    the state or federal courts located in that state, and you and we consent to their jurisdiction —
+    unless the law where you live gives you the right to bring claims in your local courts.
+  </p>
+
+  <h2>12. Changes to these terms</h2>
+  <p>
+    We may update these terms. We'll change the date at the top of this page and, for significant changes,
+    note them in our <a href="/changelog">changelog</a>. If you keep using the Service after a change, the
+    updated terms apply.
+  </p>
+
+  <h2>13. Contact</h2>
+  <p>
+    {{orTodo .Legal.OperatorName "OPERATOR_NAME"}}<br>
+    {{orTodo .Legal.OperatorAddress "OPERATOR_ADDRESS"}}<br>
+    {{email .Legal.ContactEmail}}
+  </p>
+</main>
+
+{{template "footer" .}}
+</body>
+</html>

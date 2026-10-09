@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -29,6 +30,28 @@ type SiteInfo struct {
 	EmptyRoomTTL         time.Duration
 	HistoryLimit         int
 	HistoryForNewMembers bool
+	Legal                LegalInfo
+}
+
+// LegalInfo is the operator's identity and contact details for the legal pages.
+type LegalInfo struct {
+	OperatorName     string
+	OperatorAddress  string
+	ContactEmail     string
+	GoverningState   string
+	LogRetentionDays int
+}
+
+// Missing lists the legal settings that are still empty.
+func (l LegalInfo) Missing() []string {
+	var m []string
+	for name, v := range map[string]string{"OPERATOR_NAME": l.OperatorName, "OPERATOR_ADDRESS": l.OperatorAddress, "CONTACT_EMAIL": l.ContactEmail, "GOVERNING_STATE": l.GoverningState} {
+		if strings.TrimSpace(v) == "" {
+			m = append(m, name)
+		}
+	}
+	sort.Strings(m)
+	return m
 }
 
 // Pages renders the server-side marketing pages and SEO files.
@@ -62,13 +85,18 @@ type pageData struct {
 	Facts        siteFacts
 	FAQ          []faqItem
 	JSONLD       template.JS
+	Legal        LegalInfo
+	Updated      string // "last updated" date of a legal page
 }
 
 // NewPages parses templates/<page>.html together with templates/partials.html.
 func NewPages(dir string, info SiteInfo) (*Pages, error) {
-	funcs := template.FuncMap{"capfirst": capFirst}
+	funcs := template.FuncMap{"capfirst": capFirst, "orTodo": orTodo, "email": emailLink}
 	p := &Pages{info: info, pages: map[string]*template.Template{}}
-	for _, name := range []string{"index", "changelog"} {
+	if missing := info.Legal.Missing(); len(missing) > 0 {
+		log.Printf("WARNING: Terms/Privacy pages show placeholders; set %s", strings.Join(missing, ", "))
+	}
+	for _, name := range []string{"index", "changelog", "terms", "privacy"} {
 		t, err := template.New(name+".html").Funcs(funcs).ParseFiles(
 			filepath.Join(dir, name+".html"), filepath.Join(dir, "partials.html"))
 		if err != nil {
@@ -134,6 +162,7 @@ func (p *Pages) render(c *gin.Context, name string, d pageData) {
 	d.BaseURL = p.baseURL(c)
 	d.Year = time.Now().Year()
 	d.AssetVersion = p.assetVersion
+	d.Legal = p.info.Legal
 	if d.Facts == (siteFacts{}) {
 		d.Facts = p.facts()
 	}
@@ -204,6 +233,28 @@ func (p *Pages) Changelog(c *gin.Context) {
 	})
 }
 
+// legalUpdated is the "last updated" date of the Terms and Privacy Policy.
+// Change it whenever their text changes.
+const legalUpdated = "October 9, 2026"
+
+func (p *Pages) Terms(c *gin.Context) {
+	p.render(c, "terms", pageData{
+		Title:       "Terms of Service — CloudChat",
+		Description: "The rules for using CloudChat's temporary chat rooms and secret notes.",
+		Path:        "/terms",
+		Updated:     legalUpdated,
+	})
+}
+
+func (p *Pages) Privacy(c *gin.Context) {
+	p.render(c, "privacy", pageData{
+		Title:       "Privacy Policy — CloudChat",
+		Description: "What CloudChat stores, for how long, and why. No accounts, no tracking, no ads.",
+		Path:        "/privacy",
+		Updated:     legalUpdated,
+	})
+}
+
 func (p *Pages) Robots(c *gin.Context) {
 	c.String(http.StatusOK, "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /ws/\nDisallow: /chat/secret/\nDisallow: /chat/?room=\n\nSitemap: %s/sitemap.xml\n", p.baseURL(c))
 }
@@ -213,7 +264,7 @@ func (p *Pages) Sitemap(c *gin.Context) {
 	var b strings.Builder
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	for _, u := range []struct{ path, prio string }{{"/", "1.0"}, {"/chat/", "0.8"}, {"/chat/secret", "0.7"}, {"/changelog", "0.5"}} {
+	for _, u := range []struct{ path, prio string }{{"/", "1.0"}, {"/chat/", "0.8"}, {"/chat/secret", "0.7"}, {"/changelog", "0.5"}, {"/privacy", "0.3"}, {"/terms", "0.3"}} {
 		fmt.Fprintf(&b, "  <url><loc>%s%s</loc><priority>%s</priority></url>\n", template.HTMLEscapeString(base), u.path, u.prio)
 	}
 	b.WriteString("</urlset>\n")
@@ -248,6 +299,24 @@ func humanDuration(d time.Duration) string {
 	default:
 		return plural(int64(d/time.Second), "second")
 	}
+}
+
+// orTodo renders a configured value, or a highlighted placeholder so a
+// missing legal detail is obvious on the page.
+func orTodo(value, label string) template.HTML {
+	if strings.TrimSpace(value) == "" {
+		return template.HTML(`<mark class="todo">[` + template.HTMLEscapeString(label) + `]</mark>`)
+	}
+	return template.HTML(template.HTMLEscapeString(value))
+}
+
+// emailLink renders a mailto link, or a placeholder when no address is set.
+func emailLink(addr string) template.HTML {
+	if strings.TrimSpace(addr) == "" {
+		return orTodo("", "CONTACT_EMAIL")
+	}
+	e := template.HTMLEscapeString(addr)
+	return template.HTML(`<a href="mailto:` + e + `">` + e + `</a>`)
 }
 
 func capFirst(s string) string {

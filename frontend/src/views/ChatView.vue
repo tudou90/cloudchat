@@ -94,6 +94,11 @@
         </div>
       </div>
 
+      <p class="mt-4 text-xs text-slate-600">
+        By starting or joining a session you agree to our
+        <a href="/terms" class="underline hover:text-slate-400">Terms</a> and
+        <a href="/privacy" class="underline hover:text-slate-400">Privacy Policy</a>.
+      </p>
       <a v-if="invited" :href="baseUrl" class="block mt-6 text-sm text-slate-500 hover:text-slate-300 transition">
         Start your own session instead
       </a>
